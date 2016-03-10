@@ -163,6 +163,9 @@ class Plugin extends Base {
 						case 'GitLab':
 							$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
 							break;
+						case 'Bitbucket':
+							$repo_enterprise_api = $repo_enterprise_uri . '/plugins/servlet/archive/projects';
+							break;
 					}
 				}
 
