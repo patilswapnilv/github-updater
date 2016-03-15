@@ -154,9 +154,11 @@ class Plugin extends Base {
 					}
 				}
 
+        Log::write2log( "repo enterprise uri: " . $repo_enterprise_uri );
 				if ( ! empty( $repo_enterprise_uri ) ) {
 					$repo_enterprise_uri = trim( $repo_enterprise_uri, '/' );
-					switch( $header_parts[0] ) {
+          Log::write2log( "headerparts: " . $header_parts[0] ); 
+          switch( $header_parts[0] ) {
 						case 'GitHub':
 							$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
 							break;

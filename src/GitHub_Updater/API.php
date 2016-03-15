@@ -104,11 +104,15 @@ abstract class API extends Base {
 	protected function api( $url ) {
 		$type          = $this->return_repo_type();
 		$response      = wp_remote_get( $this->_get_api_url( $url ) );
-		$code          = (integer) wp_remote_retrieve_response_code( $response );
+    log::write2log( "Start response");
+    Log::write2log( print_r( $response, true ) );
+    log::write2log( "End response");
+    $code          = (integer) wp_remote_retrieve_response_code( $response );
 		$allowed_codes = array( 200, 404 );
 
 		if ( is_wp_error( $response ) ) {
-			return false;
+      Log::write2code( 'error found' ); 
+      return false;
 		}
 		if ( ! in_array( $code, $allowed_codes, false ) ) {
 			self::$error_code = array_merge(
@@ -168,11 +172,16 @@ abstract class API extends Base {
 				$endpoint = $api->add_endpoints( $this, $endpoint );
 				if ( $this->type->enterprise_api ) {
 					return $endpoint;
-				}
+        }
+      case 'bitbucket':
+				if ( $this->type->enterprise_api ) {
+          Log::write2log( '_get_api_url Bitbucket enterprise, use url: ' . $this->type->enterprise_api . $endpoint );
+          return $this->type->enterprise_api . $endpoint;
+        }
 				break;
 			default:
 		}
-
+    Log::write2log( '_get_api_url: ' . $type['base_uri'] . $endpoint );  
 		return $type['base_uri'] . $endpoint;
 	}
 

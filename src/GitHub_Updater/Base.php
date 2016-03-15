@@ -824,7 +824,7 @@ class Base {
 				unset( $response['sections'][ $key[1] ] );
 			}
 		}
-
+    log::write2log( 'set_readme_info: ' . print_r( $response, true ) );
 		$response['sections']['other_notes'] = ! empty( $response['remaining_content'] ) ? $response['remaining_content'] : null;
 		if ( empty( $response['sections']['other_notes'] ) ) {
 			unset( $response['sections']['other_notes'] );
