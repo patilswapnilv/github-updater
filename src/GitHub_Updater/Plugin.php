@@ -166,8 +166,9 @@ class Plugin extends Base {
 							$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
 							break;
 						case 'Bitbucket':
-							$repo_enterprise_api = $repo_enterprise_uri . '/plugins/servlet/archive/projects';
-							break;
+							#$repo_enterprise_api = $repo_enterprise_uri . '/plugins/servlet/archive/projects';
+							$repo_enterprise_api = $repo_enterprise_uri . '/rest/api';
+              break;
 					}
 				}
 
