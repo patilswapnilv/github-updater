@@ -62,18 +62,12 @@ class Bitbucket_API extends API {
 		if ( ! $response ) {
 			if ( empty( $this->type->branch ) ) {
 				$this->type->branch = 'master';
-      }
-
-      // owner aka projectKey
-      if( $this->type->enterprise_api ) { 
-			  $response = $this->api( '/1.0/projects/:owner/repos/:repo/browse/'  . $file . '?at=' . ( $this->type->branch ) );
-      } else {
-        $response = $this->api( '/1.0/repositories/:owner/:repo/src/' . trailingslashit( $this->type->branch ) . $file );
-      }
+			}
+			$response = $this->api( '/1.0/repositories/:owner/:repo/src/' . trailingslashit( $this->type->branch ) . $file );
 
 			if ( $response ) {
 				$contents = $response->data;
-        $response = $this->get_file_headers( $contents, $this->type->type );
+				$response = $this->get_file_headers( $contents, $this->type->type );
 				$this->set_transient( $file, $response );
 			}
 		}
@@ -100,15 +94,9 @@ class Bitbucket_API extends API {
 			return false;
 		}
 
-    if ( ! $response ) {
-
-
-      if( $this->type->enterprise_api ) {
-        $response = $this->api( '/1.0/projects/:owner/repos/:repo/tags' );
-      } else {  
-        $response = $this->api( '/1.0/repositories/:owner/:repo/tags' );
-      }  
-      $arr_resp = (array) $response;
+		if ( ! $response ) {
+			$response = $this->api( '/1.0/repositories/:owner/:repo/tags' );
+			$arr_resp = (array) $response;
 
 			if ( ! $response || ! $arr_resp ) {
 				$response = new \stdClass();
@@ -156,15 +144,10 @@ class Bitbucket_API extends API {
 		if ( ! $response ) {
 			if ( ! isset( $this->type->branch ) ) {
 				$this->type->branch = 'master';
-      }
+			}
+			$response = $this->api( '/1.0/repositories/:owner/:repo/src/' . trailingslashit( $this->type->branch ) . $changes );
 
-      if( $this->type->enterprise_api ) {
-			  $response = $this->api( '/1.0/projects/:owner/repos/:repo/browse/'  . $changes . '?at=' . ( $this->type->branch ) );
-      } else { 
-        $response = $this->api( '/1.0/repositories/:owner/:repo/src/' . trailingslashit( $this->type->branch ) . $changes );
-      }
-      
-      if ( ! $response ) {
+			if ( ! $response ) {
 				$response          = new \stdClass();
 				$response->message = 'No changelog found';
 			}
@@ -222,14 +205,9 @@ class Bitbucket_API extends API {
 			if ( ! isset( $this->type->branch ) ) {
 				$this->type->branch = 'master';
 			}
-      
-      if ( $this->type->enterprise_api ) { 
-        $response = $this->api( '/1.0/projects/:owner/repos/:repo/browse/readme.txt' . '?at=' . ( $this->type->branch ) );
-      } else {
-        $response = $this->api( '/1.0/repositories/:owner/:repo/src/' . trailingslashit( $this->type->branch ) . 'readme.txt' );
-      }
-      
-      if ( ! $response ) {
+			$response = $this->api( '/1.0/repositories/:owner/:repo/src/' . trailingslashit( $this->type->branch ) . 'readme.txt' );
+
+			if ( ! $response ) {
 				$response = new \stdClass();
 				$response->message = 'No readme found';
 			}
@@ -263,14 +241,10 @@ class Bitbucket_API extends API {
 			return false;
 		}
 
-    if ( ! $response ) {
-      if( $this->type->enterprise_api ) {
-        $response = $this->api( '/1.0/projects/:owner/repos/:repo' );
-      } else {
-        $response = $this->api( '/2.0/repositories/:owner/:repo' );
-      }
-    
-      if ( $response ) {
+		if ( ! $response ) {
+			$response = $this->api( '/2.0/repositories/:owner/:repo' );
+
+			if ( $response ) {
 				$this->set_transient( 'meta', $response );
 			}
 		}
@@ -298,16 +272,9 @@ class Bitbucket_API extends API {
 			return false;
 		}
 
-    if ( ! $response ) {
-      if( $this->type->enterprise_api ) {
-        // Bitbucket Server uses a paged response to limit the returned response
-        // see https://developer.atlassian.com/static/rest/bitbucket-server/4.4.1/bitbucket-rest.html#paging-params
-        // Currently not implemented so the default limit in your Bitbucket Server installation is used,
-        // according to the docs the limit is set to 25. 
-        $response = $this->api( '/1.0/projects/:owner/repos/:repo/branches' );
-      } else { 
-			  $response = $this->api( '/1.0/repositories/:owner/:repo/branches' );
-      }
+		if ( ! $response ) {
+			$response = $this->api( '/1.0/repositories/:owner/:repo/branches' );
+
 			if ( $response ) {
 				foreach ( $response as $branch => $api_response ) {
 					$branches[ $branch ] = $this->construct_download_link( false, $branch );
@@ -392,8 +359,7 @@ class Bitbucket_API extends API {
 	 * @access private
 	 */
 	private function _add_meta_repo_object() {
-    // TODO check meta data reponse & check if it can be mapped. 
-    $this->type->rating       = $this->make_rating( $this->type->repo_meta );
+		$this->type->rating       = $this->make_rating( $this->type->repo_meta );
 		$this->type->last_updated = $this->type->repo_meta->updated_on;
 		$this->type->num_ratings  = $this->type->watchers;
 		$this->type->private      = $this->type->repo_meta->is_private;
