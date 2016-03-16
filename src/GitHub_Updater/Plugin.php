@@ -208,17 +208,28 @@ class Plugin extends Base {
 
 	/**
 	 * Get remote plugin meta to populate $config plugin objects. 
-	 * Calls to remote APIs to get data. 
+   * Calls to remote APIs to get data. 
+   *
+   * Note: Bitbucket Cloud (https://bitbucket.org) and Bitbucket Server
+   * have different API's and therefore finding an enterprise_api will
+   * load a different class for use with Bitbucket Server. 
+   * 
+   *
 	 */
 	public function get_remote_plugin_meta() {
 		foreach ( (array) $this->config as $plugin ) {
 			$this->repo_api = null;
-			switch( $plugin->type ) {
+      switch( $plugin->type ) {
 				case 'github_plugin':
 					$this->repo_api = new GitHub_API( $plugin );
 					break;
-				case 'bitbucket_plugin':
-					$this->repo_api = new Bitbucket_API( $plugin );
+        case 'bitbucket_plugin':
+          if( ! empty( $plugin->enterprise_api ) ) {
+            log::write2log( 'Going to use Bitbucket Server API' );
+            $this->repo_api = new Bitbucket_Server_API( $plugin );
+          } else {
+            $this->repo_api = new Bitbucket_API( $plugin );
+          }
 					break;
 				case 'gitlab_plugin';
 					$this->repo_api = new GitLab_API( $plugin );
