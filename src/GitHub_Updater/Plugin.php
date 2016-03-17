@@ -163,6 +163,8 @@ class Plugin extends Base {
 						case 'GitLab':
 							$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
 							break;
+						case 'Bitbucket':
+							$repo_enterprise_api = $repo_enterprise_uri;
 					}
 				}
 
@@ -212,7 +214,11 @@ class Plugin extends Base {
 					$this->repo_api = new GitHub_API( $plugin );
 					break;
 				case 'bitbucket_plugin':
-					$this->repo_api = new Bitbucket_API( $plugin );
+					if ( $plugin->enterprise_api ) {
+						$this->repo_api = new Bitbucket_Server_API( $plugin );
+					} else {
+						$this->repo_api = new Bitbucket_API( $plugin );
+					}
 					break;
 				case 'gitlab_plugin';
 					$this->repo_api = new GitLab_API( $plugin );
