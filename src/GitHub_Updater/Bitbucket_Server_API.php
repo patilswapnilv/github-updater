@@ -9,7 +9,7 @@
  */
 
 /** 
- * BjornW TODO: 
+ * TODO: 
  * - paging API support, for we're limited to Bitbucket Server default limit of 25
  * - personal repositories are not yet supported, using project based repositories 
  **/
@@ -30,7 +30,8 @@ if ( ! defined( 'WPINC' ) ) {
  * Assumes an owner == project_key
  *
  * @package Fragen\GitHub_Updater
- * @author  Andy Fragen. Bjorn Wijers
+ * @author  Andy Fragen
+ * @author  Bjorn Wijers
  */
 class Bitbucket_Server_API extends API {
 
@@ -41,11 +42,7 @@ class Bitbucket_Server_API extends API {
 	 */
 	public function __construct( $type ) {
 		$this->type     = $type;
-		if ( defined(WP_DEBUG) && true === WP_DEBUG) {
-			parent::$hours = 0.0001;  // setting transients to 0.36 sec 
-		} else {
-			parent::$hours  = 12;
-		}
+		parent::$hours  = 12;
 		$this->response = $this->get_transient();
 
 		add_filter( 'http_request_args', array( &$this, 'maybe_authenticate_http' ), 10, 2 );
@@ -75,7 +72,10 @@ class Bitbucket_Server_API extends API {
 				$this->type->branch = 'master';
 			}
 
-			$response = $this->api( '/1.0/projects/:owner/repos/:repo/browse/'  . $file . '?at=' . ( $this->type->branch ) );
+			$path = '/1.0/projects/:owner/repos/:repo/browse/' . $file;
+			$path = add_query_arg( 'at', $this->type->branch, $path );
+
+			$response = $this->api( $path );
 
 			if ( $response ) {
 				$contents = $this->_recombine_response( $response );
@@ -110,11 +110,8 @@ class Bitbucket_Server_API extends API {
 				$remote_info_file .= $line->text . "\n";
 			}
 		} 
-		#log::write2log( 'combiner: ' . $remote_info_file ); 
 		return $remote_info_file;
 	}
-
-
 
 
 	/**
@@ -162,13 +159,12 @@ class Bitbucket_Server_API extends API {
 	public function get_remote_changes( $changes ) {
 		$response = isset( $this->response['changes'] ) ? $this->response['changes'] : false;
 
-
 		/*
 		 * Set $response from local file if no update available.
 		 */
 		if ( ! $response && ! $this->can_update( $this->type ) ) {
 			$response = new \stdClass();
-			$content = $this->get_local_info( $this->type, $changes );
+			$content  = $this->get_local_info( $this->type, $changes );
 			if ( $content ) {
 				$response->data = $content;
 				$this->set_transient( 'changes', $response );
@@ -273,6 +269,7 @@ class Bitbucket_Server_API extends API {
 		return true;
 	}
 
+
 	/** 
 	 * The Bitbucket Server REST API does not support downloading files directly at the moment
 	 * therefor we'll use this to construct urls to fetch the raw files ourselves. 
@@ -363,7 +360,7 @@ class Bitbucket_Server_API extends API {
 	/**
 	 * Construct $this->type->download_link using Bitbucket API
 	 *
-	 * @param boolean $rollback for theme rollback
+	 * @param boolean $rollback      for theme rollback
 	 * @param boolean $branch_switch for direct branch changing
 	 *
 	 * @return string $endpoint
@@ -391,7 +388,6 @@ class Bitbucket_Server_API extends API {
 			$download_url = add_query_arg( 'at', $branch_switch, $download_url );
 		}
 
-		Log::write2log('construct_download_url: ' . $download_url);
 		return $download_url;
 	}
 
@@ -405,7 +401,6 @@ class Bitbucket_Server_API extends API {
 		// $this->type->num_ratings  = $this->type->watchers; 
 
 		// Use the inverse. E.g. if public is true, return false so private is false and thus publicly accessible 
-		log::write2log( 'repo meta public:  ' . ! $this->type->repo_meta->project->public); 
 		$this->type->private      = ! $this->type->repo_meta->project->public; 
 	}
 
@@ -430,8 +425,8 @@ class Bitbucket_Server_API extends API {
 		 * Check whether attempting to update private Bitbucket repo.
 		 */
 		if ( isset( $this->type->repo ) &&
-			! empty( parent::$options[ $this->type->repo ] ) &&
-			false !== strpos( $url, $this->type->repo )
+		     ! empty( parent::$options[ $this->type->repo ] ) &&
+		     false !== strpos( $url, $this->type->repo )
 		) {
 			$bitbucket_private = true;
 		}
@@ -441,9 +436,9 @@ class Bitbucket_Server_API extends API {
 		 * and abort if Bitbucket user/pass not set.
 		 */
 		if ( isset( $_POST['option_page'], $_POST['is_private'] ) &&
-			'github_updater_install' === $_POST['option_page'] &&
-			'bitbucket' === $_POST['github_updater_api'] &&
-			( ! empty( parent::$options['bitbucket_username'] ) || ! empty( parent::$options['bitbucket_password'] ) )
+		     'github_updater_install' === $_POST['option_page'] &&
+		     'bitbucket' === $_POST['github_updater_api'] &&
+		     ( ! empty( parent::$options['bitbucket_username'] ) || ! empty( parent::$options['bitbucket_password'] ) )
 		) {
 			$bitbucket_private_install = true;
 		}
@@ -460,6 +455,7 @@ class Bitbucket_Server_API extends API {
 	/**
 	 * Removes Basic Authentication header for Bitbucket Release Assets.
 	 * Storage in AmazonS3 buckets, uses Query String Request Authentication Alternative.
+	 *
 	 * @link http://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html#RESTAuthenticationQueryStringAuth
 	 *
 	 * @param $args

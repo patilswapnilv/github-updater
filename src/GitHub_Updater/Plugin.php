@@ -222,13 +222,12 @@ class Plugin extends Base {
 				break;
 			case 'bitbucket_plugin':
 				if( ! empty( $plugin->enterprise_api ) ) {
-					Log::write2log( 'Going to use Bitbucket Server API' );
 					$this->repo_api = new Bitbucket_Server_API( $plugin );
 				} else {
 					$this->repo_api = new Bitbucket_API( $plugin );
 				}
 				break;
-				case 'gitlab_plugin';
+			case 'gitlab_plugin';
 				$this->repo_api = new GitLab_API( $plugin );
 				break;
 			}
