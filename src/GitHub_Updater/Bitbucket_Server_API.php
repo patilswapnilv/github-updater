@@ -80,7 +80,7 @@ class Bitbucket_Server_API extends API {
 			if ( $response ) {
         #log::write2log( 'get_remote_info: ' . print_r($response, true) ); 
         
-        $contents = $this->_recombine_remote_info( $response );
+        $contents = $this->_recombine_response( $response );
         $response = $this->get_file_headers( $contents, $this->type->type );
         
         #log::write2log( 'after file headers: ' . print_r( $response, true ) ); 
@@ -100,14 +100,15 @@ class Bitbucket_Server_API extends API {
 
 
   /** 
-   * Combines seperate text lines from API into one string
-   * so get_file_headers() can parse it. 
+   * Combines separate text lines from API response 
+   * into one string with \n line endings. 
+   * Code relying on raw text can now parse it. 
    *
    * @param array response 
    *
    * @return string combined lines of text returned by API
    */
-  private function _recombine_remote_info( $response ) {
+  private function _recombine_response( $response ) {
     $remote_info_file = '';
     if( is_array( $response->lines) ) {
       foreach( $response->lines as $line ) {
