@@ -61,7 +61,7 @@ class Bitbucket_Server_API extends API {
 	}
 
 	/**
-	 * Read the remote file and parse headers.
+	 * Read the remote file and parse headers. 
    *
 	 * @param $file
 	 *
@@ -170,6 +170,7 @@ class Bitbucket_Server_API extends API {
 	public function get_remote_changes( $changes ) {
 		$response = isset( $this->response['changes'] ) ? $this->response['changes'] : false;
 
+
 		/*
 		 * Set $response from local file if no update available.
 		 */
@@ -177,28 +178,28 @@ class Bitbucket_Server_API extends API {
 			$response = new \stdClass();
 			$content = $this->get_local_info( $this->type, $changes );
 			if ( $content ) {
-				$response->data = $content;
+				$file_contents = $content;
 				$this->set_transient( 'changes', $response );
 			} else {
 				$response = false;
 			}
 		}
 
-		if ( ! $response ) {
-			if ( ! isset( $this->type->branch ) ) {
-				$this->type->branch = 'master';
+    if ( ! $response ) {
+      if ( ! isset( $this->type->branch ) ) {
+        $this->type->branch = 'master';
       }
 
-		  $response = $this->api( '/1.0/projects/:owner/repos/:repo/browse/'  . $changes . '?at=' . ( $this->type->branch ) );
-      
-      if ( ! $response ) {
-				$response          = new \stdClass();
-				$response->message = 'No changelog found';
-			}
-
-			if ( $response ) {
-				$this->set_transient( 'changes', $response );
-			}
+      // use a constructed url to fetch the raw file response
+      // due to lack of file dowload option in Bitbucket Server
+      $response = $this->_fetch_raw_file( $changes ); 
+      Log::write2log('Continue remote_changes' );
+      if ( ! $response )  {
+        $response          = new \stdClass();
+        $response->message = 'No changelog found';
+      } else { 
+        $this->set_transient( 'changes', $response );
+      }
 		}
 
 		if ( $this->validate_response( $response ) ) {
@@ -207,9 +208,13 @@ class Bitbucket_Server_API extends API {
 
 		$changelog = isset( $this->response['changelog'] ) ? $this->response['changelog'] : false;
 
+    Log::write2log('Changelog1: '. print_r( $changelog, true )) ; 
 		if ( ! $changelog ) {
-			$parser    = new \Parsedown;
-			$changelog = $parser->text( $response->data );
+      $parser    = new \Parsedown;
+      Log::write2log( print_r($response, true) ); 
+      $file_contents = wp_remote_retrieve_body( $response );  
+      $changelog = $parser->text( $file_contents );
+      Log::write2log('Changelog2: '. print_r( $changelog, true )) ; 
 			$this->set_transient( 'changelog', $changelog );
 		}
 
@@ -223,9 +228,10 @@ class Bitbucket_Server_API extends API {
 	 *
 	 * @return bool
 	 */
-	public function get_remote_readme() {
-		if ( ! file_exists( $this->type->local_path . 'readme.txt' ) &&
-		     ! file_exists( $this->type->local_path_extended . 'readme.txt' )
+  public function get_remote_readme() {
+    $readme = 'readme.txt'; 
+		if ( ! file_exists( $this->type->local_path . $readme) &&
+		     ! file_exists( $this->type->local_path_extended . $readme )
 		) {
 			return false;
 		}
@@ -237,9 +243,9 @@ class Bitbucket_Server_API extends API {
 		 */
 		if ( ! $response && ! $this->can_update( $this->type )  ) {
 			$response = new \stdClass();
-			$content = $this->get_local_info( $this->type, 'readme.txt' );
+			$content = $this->get_local_info( $this->type, $readme );
 			if ( $content ) {
-				$response->data = $content;
+				$file_contents = $content;
 			} else {
 				$response = false;
 			}
@@ -250,7 +256,7 @@ class Bitbucket_Server_API extends API {
 				$this->type->branch = 'master';
 			}
       
-      $response = $this->api( '/1.0/projects/:owner/repos/:repo/browse/readme.txt' . '?at=' . ( $this->type->branch ) );
+      $response = $this->_fetch_raw_file( $readme );
       
       if ( ! $response ) {
 				$response = new \stdClass();
@@ -258,10 +264,11 @@ class Bitbucket_Server_API extends API {
 			}
 
 		}
-
-		if ( $response && isset( $response->data ) ) {
-			$parser   = new Readme_Parser;
-			$response = $parser->parse_readme( $response->data );
+    
+		if ( $response ) {
+      $file_contents = wp_remote_retrieve_body( $response );  
+      $parser   = new Readme_Parser;
+      $response = $parser->parse_readme( $file_contents );
 			$this->set_transient( 'readme', $response );
 		}
 
@@ -272,7 +279,31 @@ class Bitbucket_Server_API extends API {
 		$this->set_readme_info( $response );
 
 		return true;
-	}
+  }
+
+  /** 
+   * The Bitbucket Server REST API does not support downloading files directly at the moment
+   * therefor we'll use this to construct urls to fetch the raw files ourselves. 
+   *
+   * @param string filename
+   * @return bool false upon failure || return wp_remote_get() response array  
+   **/ 
+  private function _fetch_raw_file( $file ) {
+    $file = urlencode( $file ); 
+    $download_url = implode( '/', array( $this->type->enterprise, 'projects',$this->type->owner, 'repos', $this->type->repo, 'browse', $file ) );
+    $download_url = add_query_arg( array( 'at' => $this->type->branch, 'raw' => ''), $download_url );
+    
+    Log::write2log( '_fetch_raw_file download_url: ' . $download_url );
+    
+    $response = wp_remote_get( esc_url_raw($download_url) );  
+    
+    if( is_wp_error( $response) ) {
+      return false; 
+    } 
+
+    return $response;   
+  }
+
 
 	/**
 	 * Read the repository meta from API
@@ -349,51 +380,21 @@ class Bitbucket_Server_API extends API {
 	public function construct_download_link( $rollback = false, $branch_switch = false ) {
 
     // Downloads require the stash-archive plugin and use a different url
-    
-    $download_link_base = implode( '/', array( $this->type->enterprise_api, $this->type->owner, 'repos', $this->type->repo ) );
+    // see https://bitbucket.org/atlassian/stash-archive/src
+    $download_url = implode( '/', array( $this->type->enterprise,'plugins', 'servlet', 'archive', 'projects',  $this->type->owner, 'repos', $this->type->repo ) );
 
-		$endpoint           = '';
 
-		if ( $this->type->release_asset && '0.0.0' !== $this->type->newest_tag ) {
-			return $this->make_release_asset_download_link();
-		}
-
-		/*
-		 * Check for rollback.
-		 */
-		if ( ! empty( $_GET['rollback'] ) &&
-		     ( isset( $_GET['action'] ) && 'upgrade-theme' === $_GET['action'] ) &&
-		     ( isset( $_GET['theme'] ) && $this->type->repo === $_GET['theme'] )
-		) {
-			$endpoint .= $rollback . '.zip';
-
-			// for users wanting to update against branch other than master or not using tags, else use newest_tag
-		} elseif ( 'master' != $this->type->branch || empty( $this->type->tags ) ) {
-			if ( ! empty( $this->type->enterprise_api ) ) {
-				$endpoint = add_query_arg( 'at', $this->type->branch, $endpoint );
-			} else {
-				$endpoint .= $this->type->branch . '.zip';
-			}
+		if ( 'master' != $this->type->branch || empty( $this->type->tags ) ) {
+				$download_url = add_query_arg( 'at', $this->type->branch, $download_url );
 		} else {
-			if ( ! empty( $this->type->enterprise_api ) ) {
-				$endpoint = add_query_arg( 'at', $this->type->newest_tag, $endpoint );
-			} else {
-				$endpoint .= $this->type->newest_tag . '.zip';
-			}
+				$download_url = add_query_arg( 'at', $this->type->newest_tag, $download_url );
 		}
 
-		/*
-		 * Create endpoint for branch switching.
-		 */
 		if ( $branch_switch ) {
-			if ( ! empty( $this->type->enterprise_api ) ) {
-				$endpoint = add_query_arg( 'at', $branch_switch, $endpoint );
-			} else {
-				$endpoint = $branch_switch . '.zip';
-			}
+				$download_url = add_query_arg( 'at', $branch_switch, $download_url );
 		}
-
-		return $download_link_base . $endpoint;
+    Log::write2log('construct_download_url: ' . $download_url);
+		return $download_url;
 	}
 
 	/**
