@@ -167,7 +167,7 @@ class Bitbucket_Server_API extends API {
 		/*
 		 * Set $response from local file if no update available.
 		 */
-		if ( ! $response && ! $this->can_update( $this->type )  ) {
+		if ( ! $response && ! $this->can_update( $this->type ) ) {
 			$response = new \stdClass();
 			$content = $this->get_local_info( $this->type, $changes );
 			if ( $content ) {
@@ -186,7 +186,6 @@ class Bitbucket_Server_API extends API {
 			// use a constructed url to fetch the raw file response
 			// due to lack of file dowload option in Bitbucket Server
 			$response = $this->_fetch_raw_file( $changes ); 
-			Log::write2log('Continue remote_changes' );
 			if ( ! $response )  {
 				$response          = new \stdClass();
 				$response->message = 'No changelog found';
