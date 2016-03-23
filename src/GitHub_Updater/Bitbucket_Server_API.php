@@ -171,7 +171,7 @@ class Bitbucket_Server_API extends API {
 			$response = new \stdClass();
 			$content = $this->get_local_info( $this->type, $changes );
 			if ( $content ) {
-				$file_contents = $content;
+				$response->data = $content;
 				$this->set_transient( 'changes', $response );
 			} else {
 				$response = false;
@@ -185,11 +185,14 @@ class Bitbucket_Server_API extends API {
 
 			// use a constructed url to fetch the raw file response
 			// due to lack of file dowload option in Bitbucket Server
-			$response = $this->_fetch_raw_file( $changes ); 
-			if ( ! $response )  {
+			$raw_file_response = $this->_fetch_raw_file( $changes ); 
+
+			if ( ! $raw_file_response )  {
 				$response          = new \stdClass();
 				$response->message = 'No changelog found';
 			} else { 
+				$response = new \stdClass();
+				$response->data = wp_remote_retrieve_body( $raw_file_response );  
 				$this->set_transient( 'changes', $response );
 			}
 		}
@@ -202,8 +205,7 @@ class Bitbucket_Server_API extends API {
 
 		if ( ! $changelog ) {
 			$parser    = new \Parsedown;
-			$file_contents = wp_remote_retrieve_body( $response );  
-			$changelog = $parser->text( $file_contents );
+			$changelog = $parser->text( $response->data );
 			$this->set_transient( 'changelog', $changelog );
 		}
 
@@ -234,7 +236,7 @@ class Bitbucket_Server_API extends API {
 			$response = new \stdClass();
 			$content = $this->get_local_info( $this->type, $readme );
 			if ( $content ) {
-				$file_contents = $content;
+				$response->data = $content;
 			} else {
 				$response = false;
 			}
@@ -245,27 +247,29 @@ class Bitbucket_Server_API extends API {
 				$this->type->branch = 'master';
 			}
 
-			$response = $this->_fetch_raw_file( $readme );
+			$raw_file_response = $this->_fetch_raw_file( $readme );
 
-			if ( ! $response ) {
+			if ( ! $raw_file_response ) {
 				$response = new \stdClass();
 				$response->message = 'No readme found';
+			} else {
+				$response = new \stdClass();
+				$response->data = wp_remote_retrieve_body( $raw_file_response );  
 			}
-
-		}
-
-		if ( $response ) {
-			$file_contents = wp_remote_retrieve_body( $response );  
-			$parser   = new Readme_Parser;
-			$response = $parser->parse_readme( $file_contents );
-			$this->set_transient( 'readme', $response );
 		}
 
 		if ( $this->validate_response( $response ) ) {
 			return false;
 		}
 
-		$this->set_readme_info( $response );
+		if ( $response ) {
+			$parser   = new Readme_Parser;
+			$readme_parse_result = $parser->parse_readme( $response->data );
+			$this->set_transient( 'readme', $response );
+		}
+
+
+		$this->set_readme_info( $readme_parse_result );
 
 		return true;
 	}
