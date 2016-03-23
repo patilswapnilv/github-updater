@@ -39,7 +39,7 @@ class Base {
 	 * Class Object for API.
 	 * @var object
 	 */
- 	protected $repo_api;
+	protected $repo_api;
 
 	/**
 	 * Variable for setting update transient hours.
@@ -145,7 +145,7 @@ class Base {
 
 		// Added for ajax plugin updating.
 		if ( 'admin-ajax.php' === $pagenow &&
-		     ( isset( $_POST['action'] ) && 'update-plugin' === $_POST['action'] )
+			( isset( $_POST['action'] ) && 'update-plugin' === $_POST['action'] )
 		) {
 			$force_meta_update = true;
 			add_filter( 'wp_ajax_update_plugin_result', array( &$this, 'wp_ajax_update_plugin_result' ), 10, 1 );
@@ -164,8 +164,8 @@ class Base {
 			}
 		}
 		if ( is_admin() &&
-		     ( current_user_can( 'update_plugins' ) || current_user_can( 'update_themes' ) ) &&
-		     ! apply_filters( 'github_updater_hide_settings', false )
+			( current_user_can( 'update_plugins' ) || current_user_can( 'update_themes' ) ) &&
+			! apply_filters( 'github_updater_hide_settings', false )
 		) {
 			new Settings();
 		}
@@ -355,7 +355,7 @@ class Base {
 		 * Exit for mismatch.
 		 */
 		if ( $upgrader instanceof \Plugin_Upgrader && $this instanceof Theme ||
-		     $upgrader instanceof \Theme_Upgrader && $this instanceof Plugin
+			$upgrader instanceof \Theme_Upgrader && $this instanceof Plugin
 		) {
 			return $source;
 		}
@@ -455,8 +455,8 @@ class Base {
 		 * Revert extended naming if previously present.
 		 */
 		if ( $this instanceof Plugin &&
-		     ( ! defined( 'GITHUB_UPDATER_EXTENDED_NAMING' ) || ! GITHUB_UPDATER_EXTENDED_NAMING ) &&
-		     $slug !== $repo['repo']
+			( ! defined( 'GITHUB_UPDATER_EXTENDED_NAMING' ) || ! GITHUB_UPDATER_EXTENDED_NAMING ) &&
+			$slug !== $repo['repo']
 		) {
 			$new_source = trailingslashit( $remote_source ) . $repo['repo'];
 		}
@@ -466,13 +466,13 @@ class Base {
 		 * Only for plugins and not for 'master' === branch && .org hosted.
 		 */
 		if ( $this instanceof Plugin &&
-		     ( defined( 'GITHUB_UPDATER_EXTENDED_NAMING' ) && GITHUB_UPDATER_EXTENDED_NAMING ) &&
-		     ( ! $this->config[ $repo['repo'] ]->dot_org ||
-		       ( $this->tag && 'master' !== $this->tag ) )
+			( defined( 'GITHUB_UPDATER_EXTENDED_NAMING' ) && GITHUB_UPDATER_EXTENDED_NAMING ) &&
+			( ! $this->config[ $repo['repo'] ]->dot_org ||
+			( $this->tag && 'master' !== $this->tag ) )
 		) {
 			$new_source = trailingslashit( $remote_source ) . $repo['extended_repo'];
 			printf( esc_html__( 'Rename successful using extended name to %1$s', 'github-updater' ) . '&#8230;<br>',
-					'<strong>' . $repo['extended_repo'] . '</strong>'
+				'<strong>' . $repo['extended_repo'] . '</strong>'
 			);
 		}
 
@@ -497,8 +497,8 @@ class Base {
 
 		foreach ( $this->config as $repo ) {
 			if ( $slug === $repo->repo ||
-			     $slug === $repo->extended_repo ||
-			     $rename === $repo->owner . '-' . $repo->repo
+				$slug === $repo->extended_repo ||
+				$rename === $repo->owner . '-' . $repo->repo
 			) {
 				$arr['repo']          = $repo->repo;
 				$arr['extended_repo'] = $repo->extended_repo;
@@ -600,7 +600,7 @@ class Base {
 			return $changes;
 		}
 
-			return false;
+		return false;
 	}
 
 
@@ -619,7 +619,7 @@ class Base {
 		$php_version_ok  = version_compare( PHP_VERSION, $type->requires_php_version, '>=' );
 
 		if ( ( isset( $this->tag ) && $this->tag ) &&
-		     ( isset( $_GET['plugin'] ) && $type->slug === $_GET['plugin'] )
+			( isset( $_GET['plugin'] ) && $type->slug === $_GET['plugin'] )
 		) {
 			$remote_is_newer = true;
 		}
@@ -754,33 +754,33 @@ class Base {
 		$rollback = array();
 		if ( false !== $response ) {
 			switch ( $repo_type['repo'] ) {
-				case 'github':
-					foreach ( (array) $response as $tag ) {
-						if ( isset( $tag->name, $tag->zipball_url ) ) {
-							$tags[]                 = $tag->name;
-							$rollback[ $tag->name ] = $tag->zipball_url;
-						}
+			case 'github':
+				foreach ( (array) $response as $tag ) {
+					if ( isset( $tag->name, $tag->zipball_url ) ) {
+						$tags[]                 = $tag->name;
+						$rollback[ $tag->name ] = $tag->zipball_url;
 					}
-					break;
-				case 'bitbucket':
-					foreach ( (array) $response as $num => $tag ) {
-						$download_base = implode( '/', array( $repo_type['base_download'], $this->type->owner, $this->type->repo, 'get/' ) );
-						if ( isset( $num ) ) {
-							$tags[]           = $num;
-							$rollback[ $num ] = $download_base . $num . '.zip';
-						}
+				}
+				break;
+			case 'bitbucket':
+				foreach ( (array) $response as $num => $tag ) {
+					$download_base = implode( '/', array( $repo_type['base_download'], $this->type->owner, $this->type->repo, 'get/' ) );
+					if ( isset( $num ) ) {
+						$tags[]           = $num;
+						$rollback[ $num ] = $download_base . $num . '.zip';
 					}
-					break;
-				case 'gitlab':
-					foreach ( (array) $response as $tag ) {
-						$download_link = implode( '/', array( $repo_type['base_download'], $this->type->owner, $this->type->repo, 'repository/archive.zip' ) );
-						$download_link = add_query_arg( 'ref', $tag->name, $download_link );
-						if ( isset( $tag->name ) ) {
-							$tags[] = $tag->name;
-							$rollback[ $tag->name ] = $download_link;
-						}
+				}
+				break;
+			case 'gitlab':
+				foreach ( (array) $response as $tag ) {
+					$download_link = implode( '/', array( $repo_type['base_download'], $this->type->owner, $this->type->repo, 'repository/archive.zip' ) );
+					$download_link = add_query_arg( 'ref', $tag->name, $download_link );
+					if ( isset( $tag->name ) ) {
+						$tags[] = $tag->name;
+						$rollback[ $tag->name ] = $download_link;
 					}
-					break;
+				}
+				break;
 			}
 
 		}
@@ -910,17 +910,17 @@ class Base {
 		}
 
 		switch ( $repo->type ) {
-			case 'github_plugin':
-			case 'github_theme':
-				$response = base64_encode( $response );
-				break;
-			case 'bitbucket_plugin':
-			case 'bitbucket_theme':
-				break;
-			case 'gitlab_plugin':
-			case 'gitlab_theme':
-				$response = base64_encode( $response );
-				break;
+		case 'github_plugin':
+		case 'github_theme':
+			$response = base64_encode( $response );
+			break;
+		case 'bitbucket_plugin':
+		case 'bitbucket_theme':
+			break;
+		case 'gitlab_plugin':
+		case 'gitlab_theme':
+			$response = base64_encode( $response );
+			break;
 		}
 
 		return $response;
