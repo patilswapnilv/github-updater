@@ -66,21 +66,21 @@ abstract class API extends Base {
 	protected function return_repo_type() {
 		$arr = array();
 		switch ( $this->type->type ) {
-			case ( stristr( $this->type->type, 'github' ) ):
-				$arr['repo']          = 'github';
-				$arr['base_uri']      = 'https://api.github.com';
-				$arr['base_download'] = 'https://github.com';
-				break;
-			case ( stristr( $this->type->type, 'bitbucket' ) ):
-				$arr['repo']          = 'bitbucket';
-				$arr['base_uri']      = 'https://bitbucket.org/api';
-				$arr['base_download'] = 'https://bitbucket.org';
-				break;
-			case ( stristr( $this->type->type, 'gitlab' ) ):
-				$arr['repo']          = 'gitlab';
-				$arr['base_uri']      = 'https://gitlab.com/api/v3';
-				$arr['base_download'] = 'https://gitlab.com';
-				break;
+		case ( stristr( $this->type->type, 'github' ) ):
+			$arr['repo']          = 'github';
+			$arr['base_uri']      = 'https://api.github.com';
+			$arr['base_download'] = 'https://github.com';
+			break;
+		case ( stristr( $this->type->type, 'bitbucket' ) ):
+			$arr['repo']          = 'bitbucket';
+			$arr['base_uri']      = 'https://bitbucket.org/api';
+			$arr['base_download'] = 'https://bitbucket.org';
+			break;
+		case ( stristr( $this->type->type, 'gitlab' ) ):
+			$arr['repo']          = 'gitlab';
+			$arr['base_uri']      = 'https://gitlab.com/api/v3';
+			$arr['base_download'] = 'https://gitlab.com';
+			break;
 		}
 		if ( false !== stristr( $this->type->type, 'plugin' ) ) {
 			$arr['type'] = 'plugin';
@@ -121,8 +121,8 @@ abstract class API extends Base {
 					'repo' => $this->type->repo,
 					'code' => $code,
 					'name' => $this->type->name,
-					)
-				) );
+				)
+			) );
 			if ( 'github' === $type['repo'] ) {
 				GitHub_API::ratelimit_reset( $response, $this->type->repo );
 			}
@@ -160,28 +160,28 @@ abstract class API extends Base {
 		}
 
 		switch ( $type['repo'] ) {
-			case 'github':
-				$api      = new GitHub_API( $type['type'] );
-				$endpoint = $api->add_endpoints( $this, $endpoint );
-				if ( $this->type->enterprise_api ) {
-					return $endpoint;
-				}
-				break;
-			case 'gitlab':
-				$api      = new GitLab_API( $type['type'] );
-				$endpoint = $api->add_endpoints( $this, $endpoint );
-				if ( $this->type->enterprise_api ) {
-					return $endpoint;
-        }
-      case 'bitbucket':
-				if ( $this->type->enterprise_api ) {
-          Log::write2log( '_get_api_url Bitbucket enterprise, use url: ' . $this->type->enterprise_api . $endpoint );
-          return $this->type->enterprise_api . $endpoint;
-        }
-				break;
-			default:
+		case 'github':
+			$api      = new GitHub_API( $type['type'] );
+			$endpoint = $api->add_endpoints( $this, $endpoint );
+			if ( $this->type->enterprise_api ) {
+				return $endpoint;
+			}
+			break;
+		case 'gitlab':
+			$api      = new GitLab_API( $type['type'] );
+			$endpoint = $api->add_endpoints( $this, $endpoint );
+			if ( $this->type->enterprise_api ) {
+				return $endpoint;
+			}
+		case 'bitbucket':
+			if ( $this->type->enterprise_api ) {
+				Log::write2log( '_get_api_url Bitbucket enterprise, use url: ' . $this->type->enterprise_api . $endpoint );
+				return $this->type->enterprise_api . $endpoint;
+			}
+			break;
+		default:
 		}
-    Log::write2log( '_get_api_url: ' . $type['base_uri'] . $endpoint );  
+		Log::write2log( '_get_api_url: ' . $type['base_uri'] . $endpoint );  
 		return $type['base_uri'] . $endpoint;
 	}
 
@@ -243,27 +243,27 @@ abstract class API extends Base {
 	 */
 	protected function make_release_asset_download_link() {
 		switch ( $this->type->type ) {
-			case 'github_plugin':
-			case 'github_theme':
-				$download_link = implode( '/', array(
-					'https://github.com',
-					$this->type->owner,
-					$this->type->repo,
-					'releases/download',
-					$this->type->newest_tag,
-					$this->type->repo . '-' . $this->type->newest_tag . '.zip',
-				) );
-				break;
-			case 'bitbucket_plugin':
-			case 'bitbucket_theme':
-				$download_link = implode( '/', array(
-					'https://bitbucket.org',
-					$this->type->owner,
-					$this->type->repo,
-					'downloads',
-					$this->type->repo . '-' . $this->type->newest_tag . '.zip',
-				) );
-				break;
+		case 'github_plugin':
+		case 'github_theme':
+			$download_link = implode( '/', array(
+				'https://github.com',
+				$this->type->owner,
+				$this->type->repo,
+				'releases/download',
+				$this->type->newest_tag,
+				$this->type->repo . '-' . $this->type->newest_tag . '.zip',
+			) );
+			break;
+		case 'bitbucket_plugin':
+		case 'bitbucket_theme':
+			$download_link = implode( '/', array(
+				'https://bitbucket.org',
+				$this->type->owner,
+				$this->type->repo,
+				'downloads',
+				$this->type->repo . '-' . $this->type->newest_tag . '.zip',
+			) );
+			break;
 		}
 		return $download_link;
 	}
