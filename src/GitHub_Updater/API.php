@@ -104,14 +104,10 @@ abstract class API extends Base {
 	protected function api( $url ) {
 		$type          = $this->return_repo_type();
 		$response      = wp_remote_get( $this->_get_api_url( $url ) );
-    log::write2log( "Start response");
-    Log::write2log( print_r( $response, true ) );
-    log::write2log( "End response");
     $code          = (integer) wp_remote_retrieve_response_code( $response );
 		$allowed_codes = array( 200, 404 );
 
 		if ( is_wp_error( $response ) ) {
-      Log::write2code( 'error found' ); 
       return false;
 		}
 		if ( ! in_array( $code, $allowed_codes, false ) ) {
