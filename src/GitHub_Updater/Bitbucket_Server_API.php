@@ -78,13 +78,8 @@ class Bitbucket_Server_API extends API {
 			$response = $this->api( '/1.0/projects/:owner/repos/:repo/browse/'  . $file . '?at=' . ( $this->type->branch ) );
 
 			if ( $response ) {
-				#log::write2log( 'get_remote_info: ' . print_r($response, true) ); 
-
 				$contents = $this->_recombine_response( $response );
 				$response = $this->get_file_headers( $contents, $this->type->type );
-
-				#log::write2log( 'after file headers: ' . print_r( $response, true ) ); 
-
 				$this->set_transient( $file, $response );
 			}
 		}
@@ -136,9 +131,7 @@ class Bitbucket_Server_API extends API {
 		}
 
 		if ( ! $response ) {
-
 			$response = $this->api( '/1.0/projects/:owner/repos/:repo/tags' );
-
 			$arr_resp = (array) $response;
 
 			if ( ! $response || ! $arr_resp ) {
@@ -208,13 +201,10 @@ class Bitbucket_Server_API extends API {
 
 		$changelog = isset( $this->response['changelog'] ) ? $this->response['changelog'] : false;
 
-		Log::write2log('Changelog1: '. print_r( $changelog, true )) ; 
 		if ( ! $changelog ) {
 			$parser    = new \Parsedown;
-			Log::write2log( print_r($response, true) ); 
 			$file_contents = wp_remote_retrieve_body( $response );  
 			$changelog = $parser->text( $file_contents );
-			Log::write2log('Changelog2: '. print_r( $changelog, true )) ; 
 			$this->set_transient( 'changelog', $changelog );
 		}
 
@@ -293,10 +283,9 @@ class Bitbucket_Server_API extends API {
 		$download_url = implode( '/', array( $this->type->enterprise, 'projects',$this->type->owner, 'repos', $this->type->repo, 'browse', $file ) );
 		$download_url = add_query_arg( array( 'at' => $this->type->branch, 'raw' => ''), $download_url );
 
-		Log::write2log( '_fetch_raw_file download_url: ' . $download_url );
-
 		$response = wp_remote_get( esc_url_raw($download_url) );  
 
+		Log::write2log( '_fetch_raw_file download_url: ' . $download_url . 'response: ' .print_r( $response, true ));
 		if( is_wp_error( $response) ) {
 			return false; 
 		} 
