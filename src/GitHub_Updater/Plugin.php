@@ -122,8 +122,8 @@ class Plugin extends Base {
 			$git_plugin = array();
 
 			if ( empty( $headers['GitHub Plugin URI'] ) &&
-			     empty( $headers['Bitbucket Plugin URI'] ) &&
-			     empty( $headers['GitLab Plugin URI'] )
+				empty( $headers['Bitbucket Plugin URI'] ) &&
+				empty( $headers['GitLab Plugin URI'] )
 			) {
 				continue;
 			}
@@ -133,7 +133,7 @@ class Plugin extends Base {
 				$repo_enterprise_api = null;
 
 				if ( empty( $headers[ $value ] ) ||
-				     false === stristr( $value, 'Plugin' )
+					false === stristr( $value, 'Plugin' )
 				) {
 					continue;
 				}
@@ -148,7 +148,7 @@ class Plugin extends Base {
 				$self_hosted_parts = array_diff( array_keys( self::$extra_repo_headers ), array( 'branch' ) );
 				foreach ( $self_hosted_parts as $part ) {
 					if ( array_key_exists( $repo_parts[ $part ], $headers ) &&
-					     ! empty( $headers[ $repo_parts[ $part ] ] )
+						! empty( $headers[ $repo_parts[ $part ] ] )
 					) {
 						$repo_enterprise_uri = $headers[ $repo_parts[ $part ] ];
 					}
@@ -158,17 +158,17 @@ class Plugin extends Base {
 				if ( ! empty( $repo_enterprise_uri ) ) {
 					$repo_enterprise_uri = trim( $repo_enterprise_uri, '/' );
           Log::write2log( "headerparts: " . $header_parts[0] ); 
-          switch( $header_parts[0] ) {
-						case 'GitHub':
-							$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
-							break;
-						case 'GitLab':
-							$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
-							break;
-						case 'Bitbucket':
 							#$repo_enterprise_api = $repo_enterprise_uri . '/plugins/servlet/archive/projects';
-							$repo_enterprise_api = $repo_enterprise_uri . '/rest/api';
-              break;
+					switch( $header_parts[0] ) {
+					case 'GitHub':
+						$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
+						break;
+					case 'GitLab':
+						$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
+						break;
+					case 'Bitbucket':
+						$repo_enterprise_api = $repo_enterprise_uri . '/rest/api';
+						break;
 					}
 				}
 
@@ -208,32 +208,32 @@ class Plugin extends Base {
 
 	/**
 	 * Get remote plugin meta to populate $config plugin objects. 
-   * Calls to remote APIs to get data. 
-   *
-   * Note: Bitbucket Cloud (https://bitbucket.org) and Bitbucket Server
-   * have different API's and therefore finding an enterprise_api will
-   * load a different class for use with Bitbucket Server. 
-   * 
-   *
+	 * Calls to remote APIs to get data. 
+	 *
+	 * Note: Bitbucket Cloud (https://bitbucket.org) and Bitbucket Server
+	 * have different API's and therefore finding an enterprise_api will
+	 * load a different class for use with Bitbucket Server. 
+	 * 
+	 *
 	 */
 	public function get_remote_plugin_meta() {
 		foreach ( (array) $this->config as $plugin ) {
 			$this->repo_api = null;
-      switch( $plugin->type ) {
-				case 'github_plugin':
-					$this->repo_api = new GitHub_API( $plugin );
-					break;
-        case 'bitbucket_plugin':
-          if( ! empty( $plugin->enterprise_api ) ) {
-            log::write2log( 'Going to use Bitbucket Server API' );
-            $this->repo_api = new Bitbucket_Server_API( $plugin );
-          } else {
-            $this->repo_api = new Bitbucket_API( $plugin );
-          }
-					break;
+			switch( $plugin->type ) {
+			case 'github_plugin':
+				$this->repo_api = new GitHub_API( $plugin );
+				break;
+			case 'bitbucket_plugin':
+				if( ! empty( $plugin->enterprise_api ) ) {
+					Log::write2log( 'Going to use Bitbucket Server API' );
+					$this->repo_api = new Bitbucket_Server_API( $plugin );
+				} else {
+					$this->repo_api = new Bitbucket_API( $plugin );
+				}
+				break;
 				case 'gitlab_plugin';
-					$this->repo_api = new GitLab_API( $plugin );
-					break;
+				$this->repo_api = new GitLab_API( $plugin );
+				break;
 			}
 
 			if ( is_null( $this->repo_api ) ) {
@@ -259,7 +259,7 @@ class Plugin extends Base {
 			 * Update plugin transient with rollback (branch switching) data.
 			 */
 			if ( ! empty( $_GET['rollback'] ) &&
-			     ( isset( $_GET['plugin'] ) && $_GET['plugin'] === $plugin->slug )
+				( isset( $_GET['plugin'] ) && $_GET['plugin'] === $plugin->slug )
 			) {
 				$this->tag         = $_GET['rollback'];
 				$updates_transient = get_site_transient('update_plugins');
@@ -385,7 +385,7 @@ class Plugin extends Base {
 				unset( $links[2] );
 				$links[] = sprintf( '<a href="%s" class="thickbox">%s</a>',
 					esc_url( network_admin_url( 'plugin-install.php?tab=plugin-information&plugin=' . $repo .
-					                   '&TB_iframe=true&width=600&height=550' ) ),
+					'&TB_iframe=true&width=600&height=550' ) ),
 					esc_html__( 'View details', 'github-updater' )
 				);
 			}
@@ -505,7 +505,7 @@ class Plugin extends Base {
 				 * Don't overwrite if branch switching.
 				 */
 				if ( $this->tag &&
-				     ( isset( $_GET['plugin'] ) && $plugin->slug === $_GET['plugin'] )
+					( isset( $_GET['plugin'] ) && $plugin->slug === $_GET['plugin'] )
 				) {
 					continue;
 				}
