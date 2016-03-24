@@ -112,9 +112,17 @@ class Base {
 		add_action( 'init', array( &$this, 'init' ) );
 		add_action( 'init', array( &$this, 'background_update' ) );
 		add_action( 'init', array( &$this, 'token_distribution' ) );
-
+		
+		add_filter( 'http_request_host_is_external', array( &$this, 'allow_my_custom_host'), 10, 3 );
+		
 		add_filter( 'http_request_args', array( 'Fragen\\GitHub_Updater\\API', 'http_request_args' ), 10, 2 );
 	}
+	
+	function allow_my_custom_host( $allow, $host, $url ) {
+		return true;
+	}
+
+
 
 	/**
 	 * Instantiate Plugin, Theme, and Settings for proper user capabilities.
