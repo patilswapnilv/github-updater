@@ -771,14 +771,29 @@ class Base {
 				}
 				break;
 			case 'bitbucket':
-				foreach ( (array) $response as $num => $tag ) {
-					$download_base = implode( '/', array( $repo_type['base_download'], $this->type->owner, $this->type->repo, 'get/' ) );
-					if ( isset( $num ) ) {
-						$tags[]           = $num;
-						$rollback[ $num ] = $download_base . $num . '.zip';
+				if( $this->type->enterprise_api ) {
+					if( isset( $response->values) && is_array( $response->values) ) {
+						foreach ( $response->values as $nr => $tag ) {
+							$download_base = implode( '/', array( $this->type->enterprise,'plugins', 'servlet', 'archive', 'projects',  $this->type->owner, 'repos', $this->type->repo ) );
+							if ( isset( $tag->displayId ) ) {
+								$tags[]           = $tag->displayId;
+								$rollback[ $tag->displayId ] = add_query_arg( 'at', $tag->displayId, $download_base ); // add a download link for this specific tag
+							}
+						}
+					
+					}
+
+				} else {
+					foreach ( (array) $response as $num => $tag ) {
+						$download_base = implode( '/', array( $repo_type['base_download'], $this->type->owner, $this->type->repo, 'get/' ) );
+						if ( isset( $num ) ) {
+							$tags[]           = $num;
+							$rollback[ $num ] = $download_base . $num . '.zip';
+						}
 					}
 				}
 				break;
+
 			case 'gitlab':
 				foreach ( (array) $response as $tag ) {
 					$download_link = implode( '/', array( $repo_type['base_download'], $this->type->owner, $this->type->repo, 'repository/archive.zip' ) );

@@ -132,9 +132,8 @@ class Bitbucket_Server_API extends API {
 
 		if ( ! $response ) {
 			$response = $this->api( '/1.0/projects/:owner/repos/:repo/tags' );
-			$arr_resp = (array) $response;
 
-			if ( ! $response || ! $arr_resp ) {
+			if ( ! $response || ( isset( $response->size) && $response->size < 1) || isset( $response->errors) ) {
 				$response = new \stdClass();
 				$response->message = 'No tags found';
 			}
