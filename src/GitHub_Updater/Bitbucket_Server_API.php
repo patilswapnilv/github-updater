@@ -370,11 +370,17 @@ class Bitbucket_Server_API extends API {
 	 */
 	public function construct_download_link( $rollback = false, $branch_switch = false ) {
 
-		// Downloads require the stash-archive plugin and use a different url
-		// see https://bitbucket.org/atlassian/stash-archive/src
+		// Downloads requires the forked stash-archive plugin which enables 
+		// subdirectory support using the prefix query argument
+		// see https://bitbucket.org/BjornW/stash-archive/src
+		// the jar-file directory contains a jar file for convenience so you don't have
+		// to install the Atlassian SDK
 		$download_url = implode( '/', array( $this->type->enterprise,'plugins', 'servlet', 'archive', 'projects',  $this->type->owner, 'repos', $this->type->repo ) );
 
-
+		// add a prefix query argument to create a subdirectory with the same name 
+		// as the repo, e.g. 'my-repo' becomes 'my-repo/'
+		$download_url = add_query_arg( 'prefix', $this->type->repo . '/', $download_url );
+    
 		if ( 'master' != $this->type->branch || empty( $this->type->tags ) ) {
 			$download_url = add_query_arg( 'at', $this->type->branch, $download_url );
 		} else {
@@ -384,6 +390,7 @@ class Bitbucket_Server_API extends API {
 		if ( $branch_switch ) {
 			$download_url = add_query_arg( 'at', $branch_switch, $download_url );
 		}
+
 		Log::write2log('construct_download_url: ' . $download_url);
 		return $download_url;
 	}
