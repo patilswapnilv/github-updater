@@ -1,3 +1,14 @@
+#### 5.4.1
+* get tags for themes to rollback even if no updates are available. I was overzealous in cutting remote API calls.
+* ManageWP now works for Remote Management.
+* fix bug in `GitLab_API` to use `path` and not `name`. Thanks @marbetschar
+* add filter for background updates if set globally. Thanks @jancbeck
+* fix PHP notice when adding new Remote Management option
+* delete all transients on uninstall
+* fix logic for display of GitLab token fields and error notice
+* display WP_Error message for `wp_remote_get()` error
+* correctly get use GitLab namespace/project instead of project id when needed
+
 #### 5.4.0
 * fix deprecated PHP4 constructor in vendor class.
 * add `class Additions` to process JSON config from hook to add repositories to GitHub Updater, uses [GitHub Updater Additions](https://github.com/afragen/github-updater-additions) to add
