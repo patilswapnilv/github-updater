@@ -88,13 +88,13 @@ class Install extends Base {
 			if ( 'github' === self::$install['github_updater_api'] ) {
 
 				if ( 'github.com' === $headers['host'] || empty( $headers['host'] ) ) {
-					$github_base     = 'https://api.github.com';
+					$base            = 'https://api.github.com';
 					$headers['host'] = 'github.com';
 				} else {
-					$github_base = $headers['base_uri'] . '/api/v3';
+					$base = $headers['base_uri'] . '/api/v3';
 				}
 
-				self::$install['download_link'] = $github_base . '/repos/' . self::$install['github_updater_repo'] . '/zipball/' . self::$install['github_updater_branch'];
+				self::$install['download_link'] = $base . '/repos/' . self::$install['github_updater_repo'] . '/zipball/' . self::$install['github_updater_branch'];
 
 				/*
 				 * If asset is entered install it.
@@ -125,7 +125,14 @@ class Install extends Base {
 			 */
 			if ( 'bitbucket' === self::$install['github_updater_api'] ) {
 
-				self::$install['download_link'] = 'https://bitbucket.org/' . self::$install['github_updater_repo'] . '/get/' . self::$install['github_updater_branch'] . '.zip';
+				if ( 'bitbucket.org' === $headers['host'] || empty( $headers['host'] ) ) {
+					$base            = 'https://bitbucket.org';
+					$headers['host'] = 'bitbucket.org';
+				} else {
+					$base = $headers['base_uri'];
+				}
+
+				self::$install['download_link'] = $base . self::$install['github_updater_repo'] . '/get/' . self::$install['github_updater_branch'] . '.zip';
 				if ( isset( self::$install['is_private'] ) ) {
 					parent::$options[ self::$install['repo'] ] = 1;
 				}
@@ -140,14 +147,14 @@ class Install extends Base {
 			if ( 'gitlab' === self::$install['github_updater_api'] ) {
 
 				if ( 'gitlab.com' === $headers['host'] || empty( $headers['host'] ) ) {
-					$gitlab_base     = 'https://gitlab.com';
+					$base            = 'https://gitlab.com';
 					$headers['host'] = 'gitlab.com';
 				} else {
-					$gitlab_base = $headers['base_uri'];
+					$base = $headers['base_uri'];
 				}
 
 				self::$install['download_link'] = implode( '/', array(
-					$gitlab_base,
+					$base,
 					self::$install['github_updater_repo'],
 					'repository/archive.zip',
 				) );
