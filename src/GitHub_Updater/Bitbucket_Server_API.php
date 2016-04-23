@@ -465,7 +465,7 @@ class Bitbucket_Server_API extends API {
 	 */
 	public function http_release_asset_auth( $args, $url ) {
 		$arrURL = parse_url( $url );
-		if ( 'bbuseruploads.s3.amazonaws.com' === $arrURL['host'] ) {
+		if ( isset( $arrURL['host'] ) && 'bbuseruploads.s3.amazonaws.com' === $arrURL['host'] ) {
 			unset( $args['headers']['Authorization'] );
 		}
 
