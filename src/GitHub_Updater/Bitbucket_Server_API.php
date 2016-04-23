@@ -41,11 +41,11 @@ class Bitbucket_Server_API extends API {
 		add_filter( 'http_request_args', array( &$this, 'maybe_authenticate_http' ), 10, 2 );
 		add_filter( 'http_request_args', array( &$this, 'http_release_asset_auth' ), 15, 2 );
 
-		if ( ! isset( self::$options['bitbucket_username'] ) ) {
-			self::$options['bitbucket_username'] = null;
+		if ( ! isset( self::$options['bitbucket_enterprise_username'] ) ) {
+			self::$options['bitbucket_enterprise_username'] = null;
 		}
-		if ( ! isset( self::$options['bitbucket_password'] ) ) {
-			self::$options['bitbucket_password'] = null;
+		if ( ! isset( self::$options['bitbucket_enterprise_password'] ) ) {
+			self::$options['bitbucket_enterprise_password'] = null;
 		}
 		add_site_option( 'github_updater', self::$options );
 	}
@@ -363,7 +363,7 @@ class Bitbucket_Server_API extends API {
 		//$this->type->rating       = $this->make_rating( $this->type->repo_meta );
 		//$this->type->last_updated = $this->type->repo_meta->updated_on;
 		//$this->type->num_ratings  = $this->type->watchers;
-		$this->type->private      = $this->type->repo_meta->is_private;
+		$this->type->private = $this->type->repo_meta->is_private;
 	}
 
 	/**
@@ -376,7 +376,9 @@ class Bitbucket_Server_API extends API {
 	 * @return mixed $args
 	 */
 	public function maybe_authenticate_http( $args, $url ) {
-		if ( ! isset( $this->type ) || false === stristr( $url, 'bitbucket' ) ) {
+		if ( ! isset( $this->type ) || false === stristr( $url, 'bitbucket' ) ||
+		     empty( $this->type->enterprise_api )
+		) {
 			return $args;
 		}
 
@@ -386,9 +388,10 @@ class Bitbucket_Server_API extends API {
 		/*
 		 * Check whether attempting to update private Bitbucket repo.
 		 */
-		if ( isset( $this->type->repo ) &&
-		     ! empty( parent::$options[ $this->type->repo ] ) &&
-		     false !== strpos( $url, $this->type->repo )
+		if ( ( isset( $this->type->repo ) &&
+		       ! empty( parent::$options[ $this->type->repo ] ) &&
+		       false !== strpos( $url, $this->type->repo ) ) ||
+		     $this->type->private
 		) {
 			$bitbucket_private = true;
 		}
@@ -400,14 +403,14 @@ class Bitbucket_Server_API extends API {
 		if ( isset( $_POST['option_page'], $_POST['is_private'] ) &&
 		     'github_updater_install' === $_POST['option_page'] &&
 		     'bitbucket' === $_POST['github_updater_api'] &&
-		     ( ! empty( parent::$options['bitbucket_username'] ) || ! empty( parent::$options['bitbucket_password'] ) )
+		     ( ! empty( parent::$options['bitbucket_enterprise_username'] ) || ! empty( parent::$options['bitbucket_enterprise_password'] ) )
 		) {
 			$bitbucket_private_install = true;
 		}
 
 		if ( $bitbucket_private || $bitbucket_private_install ) {
-			$username                         = parent::$options['bitbucket_username'];
-			$password                         = parent::$options['bitbucket_password'];
+			$username                         = parent::$options['bitbucket_enterprise_username'];
+			$password                         = parent::$options['bitbucket_enterprise_password'];
 			$args['headers']['Authorization'] = 'Basic ' . base64_encode( "$username:$password" );
 		}
 

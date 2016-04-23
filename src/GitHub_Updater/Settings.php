@@ -315,6 +315,37 @@ class Settings extends Base {
 		);
 
 		/*
+		 * Add settings for Bitbucket Enterprise Username and Password.
+		 */
+
+		if ( parent::$auth_required['bitbucket_enterprise'] ) {
+			add_settings_section(
+				'bitbucket_enterprise_user',
+				esc_html__( 'Bitbucket Enterprise Private Settings', 'github-updater' ),
+				array( &$this, 'print_section_bitbucket_username' ),
+				'github_updater_install_settings'
+			);
+
+			add_settings_field(
+				'bitbucket_enterprise_username',
+				esc_html__( 'Bitbucket Enterprise Username', 'github-updater' ),
+				array( &$this, 'token_callback_text' ),
+				'github_updater_install_settings',
+				'bitbucket_enterprise_user',
+				array( 'id' => 'bitbucket_enterprise_username' )
+			);
+
+			add_settings_field(
+				'bitbucket_enterprise_password',
+				esc_html__( 'Bitbucket Enterprise Password', 'github-updater' ),
+				array( &$this, 'token_callback_text' ),
+				'github_updater_install_settings',
+				'bitbucket_enterprise_user',
+				array( 'id' => 'bitbucket_enterprise_password' )
+			);
+		}
+
+		/*
 		 * Show section for private Bitbucket repositories.
 		 */
 		if ( parent::$auth_required['bitbucket_private'] ) {
@@ -392,6 +423,16 @@ class Settings extends Base {
 				) {
 					parent::$auth_required['gitlab_enterprise'] = true;
 				}
+				/*
+				 * Set boolean if Bitbucket Server header found.
+				 */
+				if ( false !== strpos( $token->type, 'bitbucket' ) &&
+				     ! empty( $token->enterprise ) &&
+				     ! parent::$auth_required['bitbucket_enterprise']
+				) {
+					parent::$auth_required['bitbucket_enterprise'] = true;
+				}
+
 			}
 
 			/*
@@ -467,19 +508,11 @@ class Settings extends Base {
 		 * Unset options that are no longer present and update options.
 		 */
 		$ghu_unset_keys = array_diff_key( parent::$options, $ghu_options_keys );
-		unset( $ghu_unset_keys['github_access_token'] );
-		if ( parent::$auth_required['github_enterprise'] ) {
-			unset( $ghu_unset_keys['github_enterprise_token'] );
+
+		foreach ( $ghu_unset_keys as $unset_key => $value ) {
+			unset( $ghu_unset_keys[ $unset_key ] );
 		}
-		unset( $ghu_unset_keys['branch_switch'] );
-		unset( $ghu_unset_keys['bitbucket_username'] );
-		unset( $ghu_unset_keys['bitbucket_password'] );
-		if ( parent::$auth_required['gitlab'] ) {
-			unset( $ghu_unset_keys['gitlab_private_token'] );
-		}
-		if ( parent::$auth_required['gitlab_enterprise'] ) {
-			unset( $ghu_unset_keys['gitlab_enterprise_token'] );
-		}
+
 		if ( ! empty( $ghu_unset_keys ) ) {
 			foreach ( $ghu_unset_keys as $key => $value ) {
 				unset( parent::$options [ $key ] );

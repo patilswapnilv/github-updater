@@ -114,11 +114,12 @@ class Base {
 	 * @var bool
 	 */
 	protected static $auth_required = array(
-		'github_private'    => false,
-		'github_enterprise' => false,
-		'bitbucket_private' => false,
-		'gitlab'            => false,
-		'gitlab_enterprise' => false,
+		'github_private'       => false,
+		'github_enterprise'    => false,
+		'bitbucket_private'    => false,
+		'bitbucket_enterprise' => false,
+		'gitlab'               => false,
+		'gitlab_enterprise'    => false,
 	);
 
 	/**
