@@ -178,7 +178,7 @@ abstract class API extends Base {
 				break;
 			case 'bitbucket':
 				if ( $this->type->enterprise_api ) {
-					return $endpoint;
+					return $this->type->enterprise_api . $endpoint;
 				}
 				break;
 			default:

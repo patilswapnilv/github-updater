@@ -304,13 +304,24 @@ class Bitbucket_API extends API {
 	 * @return string $endpoint
 	 */
 	public function construct_download_link( $rollback = false, $branch_switch = false ) {
-		$download_link_base = implode( '/', array(
-			'https://bitbucket.org',
-			$this->type->owner,
-			$this->type->repo,
-			'get/',
-		) );
-		$endpoint           = '';
+
+		if ( ! empty( $this->type->enterprise_api ) ) {
+			$download_link_base = implode( '/', array(
+				$this->type->enterprise_api,
+				$this->type->owner,
+				'repos',
+				$this->type->repo,
+			) );
+		} else {
+			$download_link_base = implode( '/', array(
+				'https://bitbucket.org',
+				$this->type->owner,
+				$this->type->repo,
+				'get/',
+			) );
+		}
+
+		$endpoint = '';
 
 		if ( $this->type->release_asset && '0.0.0' !== $this->type->newest_tag ) {
 			return $this->make_release_asset_download_link();
@@ -327,16 +338,28 @@ class Bitbucket_API extends API {
 
 			// for users wanting to update against branch other than master or not using tags, else use newest_tag
 		} elseif ( 'master' != $this->type->branch || empty( $this->type->tags ) ) {
-			$endpoint .= $this->type->branch . '.zip';
+			if ( ! empty( $this->type->enterprise_api ) ) {
+				$endpoint = add_query_arg( 'at', $this->type->branch, $endpoint );
+			} else {
+				$endpoint .= $this->type->branch . '.zip';
+			}
 		} else {
-			$endpoint .= $this->type->newest_tag . '.zip';
+			if ( ! empty( $this->type->enterprise_api ) ) {
+				$endpoint = add_query_arg( 'at', $this->type->newest_tag, $endpoint );
+			} else {
+				$endpoint .= $this->type->newest_tag . '.zip';
+			}
 		}
 
 		/*
 		 * Create endpoint for branch switching.
 		 */
 		if ( $branch_switch ) {
-			$endpoint = $branch_switch . '.zip';
+			if ( ! empty( $this->type->enterprise_api ) ) {
+				$endpoint = add_query_arg( 'at', $branch_switch, $endpoint );
+			} else {
+				$endpoint = $branch_switch . '.zip';
+			}
 		}
 
 		return $download_link_base . $endpoint;

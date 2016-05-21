@@ -166,7 +166,8 @@ class Plugin extends Base {
 							$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
 							break;
 						case 'Bitbucket':
-							$repo_enterprise_api = $repo_enterprise_uri;
+							$repo_enterprise_api = $repo_enterprise_uri . '/rest/api';
+							break;
 					}
 				}
 
@@ -210,7 +211,13 @@ class Plugin extends Base {
 
 	/**
 	 * Get remote plugin meta to populate $config plugin objects. 
-	 * Calls to remote APIs to get data. 
+	 * Calls to remote APIs to get data.
+	 *
+	 * Note: Bitbucket Cloud (https://bitbucket.org) and Bitbucket Server
+	 * have different API's and therefore finding an enterprise_api will
+	 * load a different class for use with Bitbucket Server. 
+	 * 
+	 *
 	 */
 	public function get_remote_plugin_meta() {
 		foreach ( (array) $this->config as $plugin ) {

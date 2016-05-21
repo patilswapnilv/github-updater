@@ -148,6 +148,9 @@ class Theme extends Base {
 						case 'GitLab':
 							$repo_enterprise_api = $repo_enterprise_uri . '/api/v3';
 							break;
+						case 'Bitbucket': 
+							$repo_enterprise_api = $repo_enterprise_uri . '/rest/api';
+							break;
 					}
 				}
 
@@ -198,7 +201,12 @@ class Theme extends Base {
 					$this->repo_api = new GitHub_API( $theme );
 					break;
 				case 'bitbucket_theme':
-					$this->repo_api = new Bitbucket_API( $theme );
+					if( ! empty( $theme->enterprise_api ) ) {
+						Log::write2log( 'Using Bitbucket Server API for theme' );
+						$this->repo_api = new Bitbucket_Server_API( $theme );
+					} else {
+						$this->repo_api = new Bitbucket_API( $theme );
+					}
 					break;
 				case 'gitlab_theme':
 					$this->repo_api = new GitLab_API( $theme );

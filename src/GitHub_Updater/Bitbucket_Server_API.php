@@ -8,6 +8,12 @@
  * @link      https://github.com/afragen/github-updater
  */
 
+/**
+ * TODO:
+ * - paging API support, for we're limited to Bitbucket Server default limit of 25
+ * - personal repositories are not yet supported, using project based repositories
+ **/
+
 namespace Fragen\GitHub_Updater;
 
 /*
@@ -20,7 +26,8 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Class Bitbucket_Server_API
  *
- * Get remote data from a Bitbucket Stash repo.
+ * Get remote data from a self-hosted Bitbucket Server repo.
+ * Assumes an owner == project_key
  *
  * @package Fragen\GitHub_Updater
  * @author  Andy Fragen
@@ -71,7 +78,7 @@ class Bitbucket_Server_API extends API {
 			$response = $this->api( $path );
 
 			if ( $response ) {
-				$contents = $response->data;
+				$contents = $this->_recombine_response( $response );
 				$response = $this->get_file_headers( $contents, $this->type->type );
 				$this->set_transient( $file, $response );
 			}
@@ -85,6 +92,28 @@ class Bitbucket_Server_API extends API {
 
 		return true;
 	}
+
+
+	/**
+	 * Combines separate text lines from API response
+	 * into one string with \n line endings.
+	 * Code relying on raw text can now parse it.
+	 *
+	 * @param array $response
+	 *
+	 * @return string combined lines of text returned by API
+	 */
+	private function _recombine_response( $response ) {
+		$remote_info_file = '';
+		if ( is_array( $response->lines ) ) {
+			foreach ( $response->lines as $line ) {
+				$remote_info_file .= $line->text . "\n";
+			}
+		}
+
+		return $remote_info_file;
+	}
+
 
 	/**
 	 * Get the remote info to for tags.
@@ -101,9 +130,11 @@ class Bitbucket_Server_API extends API {
 
 		if ( ! $response ) {
 			$response = $this->api( '/1.0/projects/:owner/repos/:repo/tags' );
-			$arr_resp = (array) $response;
 
-			if ( ! $response || ! $arr_resp ) {
+			if ( ! $response ||
+			     ( isset( $response->size ) && $response->size < 1 ) ||
+			     isset( $response->errors )
+			) {
 				$response          = new \stdClass();
 				$response->message = 'No tags found';
 			}
@@ -150,17 +181,17 @@ class Bitbucket_Server_API extends API {
 			if ( ! isset( $this->type->branch ) ) {
 				$this->type->branch = 'master';
 			}
-			$path = '/1.0/projects/:owner/repos/:repo/browse/' . $changes;
-			$path = add_query_arg( 'at', $this->type->branch, $path );
 
-			$response = $this->api( $path );
+			// use a constructed url to fetch the raw file response
+			// due to lack of file dowload option in Bitbucket Server
+			$response = $this->_fetch_raw_file( $changes );
 
 			if ( ! $response ) {
 				$response          = new \stdClass();
 				$response->message = 'No changelog found';
-			}
-
-			if ( $response ) {
+			} else {
+				$response       = new \stdClass();
+				$response->data = wp_remote_retrieve_body( $response );
 				$this->set_transient( 'changes', $response );
 			}
 		}
@@ -214,16 +245,19 @@ class Bitbucket_Server_API extends API {
 				$this->type->branch = 'master';
 			}
 
-			$path = '/1.0/projects/:owner/repos/:repo/browse/readme.txt';
-			$path = add_query_arg( 'at', $this->type->branch, $path );
-
-			$response = $this->api( $path );
+			$response = $this->_fetch_raw_file( 'readme.txt' );
 
 			if ( ! $response ) {
 				$response          = new \stdClass();
 				$response->message = 'No readme found';
+			} else {
+				$response       = new \stdClass();
+				$response->data = wp_remote_retrieve_body( $response );
 			}
+		}
 
+		if ( $this->validate_response( $response ) ) {
+			return false;
 		}
 
 		if ( $response && isset( $response->data ) ) {
@@ -232,14 +266,43 @@ class Bitbucket_Server_API extends API {
 			$this->set_transient( 'readme', $response );
 		}
 
-		if ( $this->validate_response( $response ) ) {
-			return false;
-		}
 
 		$this->set_readme_info( $response );
 
 		return true;
 	}
+
+
+	/**
+	 * The Bitbucket Server REST API does not support downloading files directly at the moment
+	 * therefore we'll use this to construct urls to fetch the raw files ourselves.
+	 *
+	 * @param string $file filename
+	 *
+	 * @return bool|array false upon failure || return wp_remote_get() response array
+	 **/
+	private function _fetch_raw_file( $file ) {
+		$file         = urlencode( $file );
+		$download_url = implode( '/', array(
+			$this->type->enterprise,
+			'projects',
+			$this->type->owner,
+			'repos',
+			$this->type->repo,
+			'browse',
+			$file,
+		) );
+		$download_url = add_query_arg( array( 'at' => $this->type->branch, 'raw' => '' ), $download_url );
+
+		$response = wp_remote_get( esc_url_raw( $download_url ) );
+
+		if ( is_wp_error( $response ) ) {
+			return false;
+		}
+
+		return $response;
+	}
+
 
 	/**
 	 * Read the repository meta from API
@@ -286,7 +349,6 @@ class Bitbucket_Server_API extends API {
 
 		if ( ! $response ) {
 			$response = $this->api( '/1.0/projects/:owner/repos/:repo/branches' );
-
 			if ( $response ) {
 				foreach ( $response as $branch => $api_response ) {
 					$branches[ $branch ] = $this->construct_download_link( false, $branch );
@@ -316,37 +378,39 @@ class Bitbucket_Server_API extends API {
 	 * @return string $endpoint
 	 */
 	public function construct_download_link( $rollback = false, $branch_switch = false ) {
+
+		/*
+		 * Downloads requires the forked stash-archive plugin which enables
+		 * subdirectory support using the prefix query argument
+		 * see https://bitbucket.org/BjornW/stash-archive/src
+		 * the jar-file directory contains a jar file for convenience so you don't have
+		 * to install the Atlassian SDK
+		 */
 		$download_link_base = implode( '/', array(
-			$this->type->enterprise_api,
+			$this->type->enterprise,
+			'plugins',
+			'servlet',
+			'archive',
+			'projects',
 			$this->type->owner,
 			'repos',
 			$this->type->repo,
 		) );
-		$endpoint           = '';
 
-		if ( $this->type->release_asset && '0.0.0' !== $this->type->newest_tag ) {
-			return $this->make_release_asset_download_link();
-		}
+		$endpoint = '';
 
 		/*
-		 * Check for rollback.
+		 * add a prefix query argument to create a subdirectory with the same name
+		 * as the repo, e.g. 'my-repo' becomes 'my-repo/'
 		 */
-		if ( ! empty( $_GET['rollback'] ) &&
-		     ( isset( $_GET['action'] ) && 'upgrade-theme' === $_GET['action'] ) &&
-		     ( isset( $_GET['theme'] ) && $this->type->repo === $_GET['theme'] )
-		) {
-			$endpoint = add_query_arg( 'at', $rollback, $endpoint );
+		$endpoint = add_query_arg( 'prefix', $this->type->repo . '/', $endpoint );
 
-			// for users wanting to update against branch other than master or not using tags, else use newest_tag
-		} elseif ( 'master' != $this->type->branch || empty( $this->type->tags ) ) {
+		if ( 'master' != $this->type->branch || empty( $this->type->tags ) ) {
 			$endpoint = add_query_arg( 'at', $this->type->branch, $endpoint );
 		} else {
 			$endpoint = add_query_arg( 'at', $this->type->newest_tag, $endpoint );
 		}
 
-		/*
-		 * Create endpoint for branch switching.
-		 */
 		if ( $branch_switch ) {
 			$endpoint = add_query_arg( 'at', $branch_switch, $endpoint );
 		}
@@ -360,10 +424,15 @@ class Bitbucket_Server_API extends API {
 	 * @access private
 	 */
 	private function _add_meta_repo_object() {
-		//$this->type->rating       = $this->make_rating( $this->type->repo_meta );
-		//$this->type->last_updated = $this->type->repo_meta->updated_on;
-		//$this->type->num_ratings  = $this->type->watchers;
-		$this->type->private = $this->type->repo_meta->is_private;
+		// $this->type->rating       = $this->make_rating( $this->type->repo_meta );
+		// $this->type->last_updated = $this->type->repo_meta->updated_on;
+		// $this->type->num_ratings  = $this->type->watchers;
+
+		/*
+		 * Use the inverse. E.g. if public is true, return false so private is false
+		 * and thus publicly accessible.
+		 */
+		$this->type->private = ! $this->type->repo_meta->project->public;
 	}
 
 	/**

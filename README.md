@@ -141,6 +141,26 @@ GitHub Enterprise **requires** authentication with either a personal access toke
 
 Add the `GitLab CE` or `GitLab Enterprise` header to the plugin or theme that is hosted on your GitLab self-hosted installation. The settings should be similar to `GitLab CE: https://gitlab.yourhost.com` or `GitLab Enterprise: https://gitlab.yourhost.com`.
 
+#### Bitbucket Server Support (ALPHA Status)
+
+Caution! Bitbucket Server (formely known as Stash) support has been added recently (alpha version) and may contain bugs and errors. Please let us know if you encounter any.
+
+Github-updater depends on using a forked version of the stash-archive addon (https://bitbucket.org/BjornW/stash-archive/src) 
+which enables the use of subdirectories in zip archives. WordPress (tested with 4.4.2, 2016-04-04) currently requires a zipfile with the plugin slug as subdirectory 
+to successfully update a plugin (see also https://core.trac.wordpress.org/ticket/36373). Without subdirectories in the ziparchives the update proces will silently fail and the updated plugin is removed. 
+
+_Howto use github-updater with Bitbucket Server_
+1. Install Bitbucket Server
+2. Install the forked stash-archive addon in Bitbucket from https://bitbucket.org/BjornW/stash-archive/ (for convenience sake i've added a ready to use jar in the jar-file directory)
+3. Install the github-updater plugin
+4. Fill in the Bitbucket credentials in the github-updater Settings
+5. Check for updates
+6. If there's an update, you should now be able to update your plugins hosted in your Bitbucket Server
+
+NOTE: 
+As of writing the current stash-archive addon (2.0.3-SNAPSHOT, 2016-04-04) does **not** support a prefix argument and therefor does not support subdirectories.
+You'll need to install this forked stash-archive addon https://bitbucket.org/BjornW/stash-archive/src
+
 ### Versions
 
 GitHub Updater reads the `Version` headers from both the local file and the remote file. For an update to show as available the remote version number **must** be greater than the local version number. It is **required** to have a `Version` header in your main plugin file or your theme's `style.css` file. It is better to use [Semantic Versioning](http://semver.org).
