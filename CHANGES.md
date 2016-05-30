@@ -1,3 +1,15 @@
+#### 5.5.0
+* better internationalization for changing plugin _View details_ link
+* refactor and improve for `GitHub Updater Additions` plugin
+* fix for using GitLab CE private token with using Install
+* rework GitHub repo meta as search was occasionally flaky, now also using owner's repos check
+* refactor adding extra headers
+* add REST API endpoints for updating courtesy of @limikael
+* added CSS file to help display theme view details
+* refactored `get_remote_{plugin|theme}_meta()` to `get_remote_repo_meta()` as it was in 4 different places :P
+* updated for Shiny Updates
+* fixed PHP fatal, thanks @charli-polo
+
 #### 5.4.1
 * get tags for themes to rollback even if no updates are available. I was overzealous in cutting remote API calls.
 * ManageWP now works for Remote Management.
@@ -14,7 +26,7 @@
 
 #### 5.4.0
 * fix deprecated PHP4 constructor in vendor class.
-* add `class Additions` to process JSON config from hook to add repositories to GitHub Updater, uses [GitHub Updater Additions](https://github.com/afragen/github-updater-additions) to add
+* add `class Additions` to process JSON config from hook to add repos to GitHub Updater, see [GitHub Updater Additions](https://github.com/afragen/github-updater-additions)
 * add necessary code in `class Plugin` and `class Theme` for above
 * skip many remote API calls if no update available and use local files, huge performance boost :-)
 * remove check for GitHub asset, this eliminates an API call for a rarely used feature

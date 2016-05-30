@@ -59,11 +59,13 @@ class Plugin extends Base {
 		if ( empty( $this->config ) ) {
 			return false;
 		}
+	}
 
-		/*
-		 * Load post-processing filters. Renaming filters etc.
-		 */
-		$this->load_post_filters();
+	/**
+	 * Returns an array of configurations for the known plugins.
+	 */
+	public function get_plugin_configs() {
+		return $this->config;
 	}
 
 	/**
@@ -201,10 +203,6 @@ class Plugin extends Base {
 
 			$git_plugins[ $git_plugin['repo'] ] = (object) $git_plugin;
 		}
-		/*
-		 * Load post-processing filters. Renaming filters etc.
-		 */
-		$this->load_post_filters();
 
 		return $git_plugins;
 	}
@@ -221,40 +219,9 @@ class Plugin extends Base {
 	 */
 	public function get_remote_plugin_meta() {
 		foreach ( (array) $this->config as $plugin ) {
-			$this->repo_api = null;
-			switch ( $plugin->type ) {
-				case 'github_plugin':
-					$this->repo_api = new GitHub_API( $plugin );
-					break;
-				case 'bitbucket_plugin':
-					if ( $plugin->enterprise_api ) {
-						$this->repo_api = new Bitbucket_Server_API( $plugin );
-					} else {
-						$this->repo_api = new Bitbucket_API( $plugin );
-					}
-					break;
-				case 'gitlab_plugin';
-					$this->repo_api = new GitLab_API( $plugin );
-					break;
-			}
 
-			if ( is_null( $this->repo_api ) ) {
+			if ( ! $this->get_remote_repo_meta( $plugin ) ) {
 				continue;
-			}
-
-			$this->{$plugin->type} = $plugin;
-			$this->set_defaults( $plugin->type );
-
-			if ( $this->repo_api->get_remote_info( basename( $plugin->slug ) ) ) {
-				$this->repo_api->get_repo_meta();
-				$this->repo_api->get_remote_tag();
-				$changelog = $this->get_changelog_filename( $plugin->type );
-				if ( $changelog ) {
-					$this->repo_api->get_remote_changes( $changelog );
-				}
-				$this->repo_api->get_remote_readme();
-				$this->repo_api->get_remote_branches();
-				$plugin->download_link = $this->repo_api->construct_download_link();
 			}
 
 			/*
@@ -284,7 +251,6 @@ class Plugin extends Base {
 			}
 		}
 		$this->make_force_check_transient( 'plugins' );
-		set_site_transient( 'ghu_plugin', self::$object, ( self::$hours * HOUR_IN_SECONDS ) );
 		$this->load_pre_filters();
 	}
 
@@ -311,8 +277,8 @@ class Plugin extends Base {
 			return false;
 		}
 
-		$wp_list_table = _get_list_table( 'WP_MS_Themes_List_Table' );
-		$plugin        = $this->get_repo_slugs( dirname( $plugin_file ) );
+		$enclosure = $this->update_row_enclosure( $plugin_file, 'plugin', true );
+		$plugin    = $this->get_repo_slugs( dirname( $plugin_file ) );
 		if ( ! empty( $plugin ) ) {
 			$id       = $plugin['repo'] . '-id';
 			$branches = isset( $this->config[ $plugin['repo'] ] ) ? $this->config[ $plugin['repo'] ]->branches : null;
@@ -334,8 +300,7 @@ class Plugin extends Base {
 		/*
 		 * Create after_plugin_row_
 		 */
-		echo '<tr class="plugin-update-tr" data-slug="' . dirname( $plugin_file ) . '" data-plugin="' . $plugin_file . '"><td colspan="' . $wp_list_table->get_column_count() . '" class="plugin-update colspanchange"><div class="update-message update-ok">';
-
+		echo $enclosure['open'];
 		printf( esc_html__( 'Current branch is `%1$s`, try %2$sanother branch%3$s.', 'github-updater' ),
 			$branch,
 			'<a href="#" onclick="jQuery(\'#' . $id . '\').toggle();return false;">',
@@ -344,14 +309,22 @@ class Plugin extends Base {
 
 		print( '<ul id="' . $id . '" style="display:none; width: 100%;">' );
 		foreach ( $branches as $branch => $uri ) {
-			printf( '<li><a href="%s%s">%s</a></li>',
-				wp_nonce_url( self_admin_url( 'update.php?action=upgrade-plugin&plugin=' . urlencode( $plugin_file ) ), 'upgrade-plugin_' . $plugin_file ),
+			printf( '<li><a href="%s%s" aria-label="switch to ' . $branch . ' branch">%s</a></li>',
+				wp_nonce_url(
+					add_query_arg(
+						array(
+							'action' => 'upgrade-plugin',
+							'plugin' => urlencode( $plugin_file ),
+						),
+						self_admin_url( 'update.php' )
+					),
+					'upgrade-plugin_' . $plugin_file ),
 				'&rollback=' . urlencode( $branch ),
 				esc_attr( $branch )
 			);
 		}
 		print( '</ul>' );
-		echo '</div></td></tr>';
+		echo $enclosure['close'];
 
 		return true;
 	}
@@ -383,11 +356,21 @@ class Plugin extends Base {
 		 * Remove 'Visit plugin site' link in favor or 'View details' link.
 		 */
 		if ( array_key_exists( $repo, $this->config ) ) {
-			if ( false !== stristr( $links[2], 'Visit plugin site' ) ) {
+			if ( ! is_null( $repo ) ) {
 				unset( $links[2] );
 				$links[] = sprintf( '<a href="%s" class="thickbox">%s</a>',
-					esc_url( network_admin_url( 'plugin-install.php?tab=plugin-information&plugin=' . $repo .
-					                            '&TB_iframe=true&width=600&height=550' ) ),
+					esc_url(
+						add_query_arg(
+							array(
+								'tab'       => 'plugin-information',
+								'plugin'    => $repo,
+								'TB_iframe' => 'true',
+								'width'     => 600,
+								'height'    => 550,
+							),
+							network_admin_url( 'plugin_install.php' )
+						)
+					),
 					esc_html__( 'View details', 'github-updater' )
 				);
 			}
