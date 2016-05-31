@@ -183,7 +183,7 @@ class Bitbucket_Server_API extends API {
 			}
 
 			// use a constructed url to fetch the raw file response
-			// due to lack of file dowload option in Bitbucket Server
+			// due to lack of file download option in Bitbucket Server
 			$response = $this->_fetch_raw_file( $changes );
 
 			if ( ! $response ) {
