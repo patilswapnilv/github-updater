@@ -36,7 +36,7 @@ class Theme extends Base {
 	 *
 	 * @var bool|Theme
 	 */
-	protected static $object = false;
+	private static $instance = false;
 
 	/**
 	 * Rollback variable.
@@ -68,15 +68,14 @@ class Theme extends Base {
 	 * method - this prevents unnecessary work in rebuilding the object and
 	 * querying to construct a list of categories, etc.
 	 *
-	 * @return Theme
+	 * @return object $instance Theme
 	 */
 	public static function instance() {
-		$class = __CLASS__;
-		if ( false === self::$object ) {
-			self::$object = new $class();
+		if ( false === self::$instance ) {
+			self::$instance = new self();
 		}
 
-		return self::$object;
+		return self::$instance;
 	}
 
 	/**
@@ -567,7 +566,7 @@ class Theme extends Base {
 			),
 			self_admin_url( "theme-install.php" ) ) );
 		$nonced_update_url = wp_nonce_url(
-			$this->get_theme_update_url( 'upgrade-theme', $theme->repo ),
+			$this->get_update_url( 'theme', 'upgrade-theme', $theme->repo ),
 			'upgrade-theme_' . $theme->repo
 		);
 
