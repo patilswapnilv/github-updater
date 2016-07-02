@@ -188,14 +188,6 @@ class Base {
 			$force_meta_update = true;
 		}
 
-		// Added for ajax plugin updating.
-		if ( 'admin-ajax.php' === $pagenow &&
-		     ( isset( $_POST['action'] ) && 'update-plugin' === $_POST['action'] )
-		) {
-			$force_meta_update = true;
-			add_filter( 'wp_ajax_update_plugin_result', array( &$this, 'wp_ajax_update_plugin_result' ), 10, 1 );
-		}
-
 		if ( current_user_can( 'update_plugins' ) ) {
 			if ( $force_meta_update ) {
 				$this->forced_meta_update_plugins();
@@ -383,7 +375,7 @@ class Base {
 				break;
 		}
 
-		if ( is_null( $this->repo_api ) ) {
+		if ( null === $this->repo_api ) {
 			return false;
 		}
 
@@ -508,12 +500,24 @@ class Base {
 		 * Directory is misnamed to start.
 		 * Make cause deactivation.
 		 */
-		if ( ! array_key_exists( $slug, (array) $upgrader_object->config ) ) {
-			foreach ( $upgrader_object->config as $plugin ) {
-				if ( $slug === dirname( $plugin->slug ) ) {
-					$slug       = $plugin->repo;
-					$new_source = trailingslashit( $remote_source ) . $slug;
-					break;
+		if ( ! array_key_exists( $slug, (array) $upgrader_object->config ) &&
+		     ! isset( self::$options['github_updater_install_repo'] )
+		) {
+			if ( $upgrader instanceof \Plugin_Upgrader ) {
+				foreach ( $upgrader_object->config as $plugin ) {
+					if ( $slug === dirname( $plugin->slug ) ) {
+						$slug       = $plugin->repo;
+						$new_source = trailingslashit( $remote_source ) . $slug;
+						break;
+					}
+				}
+			}
+			if ( $upgrader instanceof \Theme_Upgrader ) {
+				foreach ( $upgrader_object->config as $theme ) {
+					if ( $slug === $theme->repo ) {
+						$new_source = trailingslashit( $remote_source ) . $slug;
+						break;
+					}
 				}
 			}
 		}
@@ -707,15 +711,13 @@ class Base {
 	 * @return array
 	 */
 	protected function parse_header_uri( $repo_header ) {
-		$header_parts         = parse_url( $repo_header );
-		$header['scheme']     = isset( $header_parts['scheme'] ) ? $header_parts['scheme'] : null;
-		$header['host']       = isset( $header_parts['host'] ) ? $header_parts['host'] : null;
-		$owner_repo           = trim( $header_parts['path'], '/' );  // strip surrounding slashes
-		$owner_repo           = str_replace( '.git', '', $owner_repo ); //strip incorrect URI ending
-		$header['path']       = $owner_repo;
-		$owner_repo           = explode( '/', $owner_repo );
-		$header['owner']      = $owner_repo[0];
-		$header['repo']       = $owner_repo[1];
+		$header_parts     = parse_url( $repo_header );
+		$header['scheme'] = isset( $header_parts['scheme'] ) ? $header_parts['scheme'] : null;
+		$header['host']   = isset( $header_parts['host'] ) ? $header_parts['host'] : null;
+		$owner_repo       = trim( $header_parts['path'], '/' );  // strip surrounding slashes
+		$owner_repo       = str_replace( '.git', '', $owner_repo ); //strip incorrect URI ending
+		$header['path']   = $owner_repo;
+		list( $header['owner'], $header['repo'] ) = explode( '/', $owner_repo );
 		$header['owner_repo'] = isset( $header['owner'] ) ? $header['owner'] . '/' . $header['repo'] : null;
 		$header['base_uri']   = str_replace( $header_parts['path'], '', $repo_header );
 		$header['uri']        = isset( $header['scheme'] ) ? trim( $repo_header, '/' ) : null;
@@ -1043,17 +1045,20 @@ class Base {
 		global $wp_version;
 		$wp_list_table = _get_list_table( 'WP_MS_Themes_List_Table' );
 		$repo_base     = $repo_name;
+		$shiny_classes = ' notice inline notice-warning notice-alt';
 
 		if ( 'plugin' === $type ) {
 			$repo_base = dirname( $repo_name );
 		}
 
+		$open = '<tr class="plugin-update-tr" data-slug="' . esc_attr( $repo_base ) . '" data-plugin="' . esc_attr( $repo_name ) . '"><td colspan="' . $wp_list_table->get_column_count() . '" class="plugin-update colspanchange"><div class="update-message">';
+
 		$enclosure = array(
-			'open'  => '<tr class="plugin-update-tr" data-slug="' . esc_attr( $repo_base ) . '" data-plugin="' . esc_attr( $repo_name ) . '"><td colspan="' . $wp_list_table->get_column_count() . '" class="plugin-update colspanchange"><div class="update-message">',
+			'open'  => $open,
 			'close' => '</div></td></tr>',
 		);
 
-		if ( version_compare( $wp_version, '4.5.100', '>=' ) ) {
+		if ( version_compare( $wp_version, '4.6-alpha-37714', '>=' ) ) {
 			$open_p  = '<p>';
 			$close_p = '</p>';
 			if ( $branch_switcher ) {
@@ -1061,7 +1066,7 @@ class Base {
 				$close_p = '';
 			}
 			$enclosure = array(
-				'open'  => '<tr class="plugin-update-tr" data-slug="' . esc_attr( $repo_base ) . '" data-plugin="' . esc_attr( $repo_name ) . '"><td colspan="' . $wp_list_table->get_column_count() . '" class="plugin-update colspanchange"><div class="update-message notice inline notice-warning notice-alt">' . $open_p,
+				'open'  => substr_replace( $open, $shiny_classes, - 2, 0 ) . $open_p,
 				'close' => $close_p . '</div></td></tr>',
 			);
 		}
