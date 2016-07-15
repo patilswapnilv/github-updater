@@ -143,23 +143,35 @@ class Settings extends Base {
 				<?php esc_html_e( 'GitHub Updater', 'github-updater' ); ?>
 			</h2>
 			<?php $this->_options_tabs(); ?>
-			<?php if ( isset( $_GET['reset'] ) && true == $_GET['reset'] ): ?>
-				<div class="updated">
-					<p><strong><?php esc_html_e( 'RESTful key reset.', 'github-updater' ); ?></strong></p>
-				</div>
-			<?php elseif ( ( isset( $_GET['updated'] ) && true == $_GET['updated'] ) ): ?>
-				<div class="updated">
-					<p><strong><?php esc_html_e( 'Saved.', 'github-updater' ); ?></strong></p>
-				</div>
-			<?php endif; ?>
-			<?php if ( 'github_updater_settings' === $tab ) : ?>
-				<form method="post" action="<?php esc_attr_e( $action ); ?>">
-					<?php
-					settings_fields( 'github_updater' );
-					do_settings_sections( 'github_updater_install_settings' );
-					submit_button();
-					?>
-				</form>
+			<?php if ( ! isset( $_GET['settings-updated'] ) ): ?>
+				<?php if ( is_multisite() && ( isset( $_GET['updated'] ) && true == $_GET['updated'] ) ): ?>
+					<div class="updated">
+						<p><?php esc_html_e( 'Settings saved.', 'github-updater' ); ?></p>
+					</div>
+				<?php elseif ( isset( $_GET['reset'] ) && true == $_GET['reset'] ): ?>
+					<div class="updated">
+						<p><?php esc_html_e( 'RESTful key reset.', 'github-updater' ); ?></p>
+					</div>
+				<?php elseif ( ( isset( $_GET['refresh_transients'] ) && true == $_GET['refresh_transients'] ) ) : ?>
+					<div class="updated">
+						<p><?php esc_html_e( 'Transients refreshed.', 'github-updater' ); ?></p>
+					</div>
+				<?php endif; ?>
+
+				<?php if ( 'github_updater_settings' === $tab ) : ?>
+					<?php $refresh_transients = add_query_arg( array( 'github_updater_refresh_transients' => true ), $action ); ?>
+					<form method="post" action="<?php esc_attr_e( $refresh_transients ); ?>">
+						<?php submit_button( esc_html__( 'Refresh Transients', 'github-updater' ) ); ?>
+					</form>
+
+					<form method="post" action="<?php esc_attr_e( $action ); ?>">
+						<?php
+						settings_fields( 'github_updater' );
+						do_settings_sections( 'github_updater_install_settings' );
+						submit_button();
+						?>
+					</form>
+				<?php endif; ?>
 			<?php endif; ?>
 
 			<?php
@@ -385,6 +397,7 @@ class Settings extends Base {
 			$options = get_site_option( 'github_updater' );
 			$options = array_merge( $options, self::sanitize( $_POST['github_updater'] ) );
 			update_site_option( 'github_updater', $options );
+			$this->redirect_on_save();
 		}
 	}
 
@@ -575,19 +588,7 @@ class Settings extends Base {
 			}
 			update_site_option( 'github_updater_remote_management', $options );
 		}
-
-		if ( $this->reset_api_key() && ! is_multisite() ) {
-			$location = add_query_arg(
-				array(
-					'page'  => 'github-updater',
-					'tab'   => isset( $_REQUEST['tab'] ) ? $_REQUEST['tab'] : 'github_updater_settings',
-					'reset' => true,
-				),
-				admin_url( 'options-general.php' )
-			);
-			wp_redirect( $location );
-			exit;
-		}
+		$this->redirect_on_save();
 	}
 
 	/**
@@ -746,25 +747,45 @@ class Settings extends Base {
 			update_site_option( 'github_updater_remote_management', $options );
 		}
 
-		$reset = $this->reset_api_key();
+		$this->redirect_on_save();
+	}
 
-		$query = parse_url( $_POST['_wp_http_referer'], PHP_URL_QUERY );
-		parse_str( $query, $arr );
-		if ( empty( $arr['tab'] ) ) {
-			$arr['tab'] = 'github_updater_settings';
+	/**
+	 * Redirect to correct Settings tab on Save.
+	 */
+	protected function redirect_on_save() {
+		$update             = false;
+		$refresh_transients = $this->refresh_transients();
+		$reset_api_key      = $this->reset_api_key();
+		$option_page        = array( 'github_updater', 'github_updater_remote_management' );
+
+		if ( ( isset( $_POST['action'] ) && 'update' === $_POST['action'] ) &&
+		     ( isset( $_POST['option_page'] ) && in_array( $_POST['option_page'], $option_page ) )
+
+		) {
+			$update = true;
 		}
 
-		$location = add_query_arg(
-			array(
-				'page'    => 'github-updater',
-				'updated' => true,
-				'tab'     => $arr['tab'],
-				'reset'   => empty( $reset ) ? false : true,
-			),
-			network_admin_url( 'settings.php' )
-		);
-		wp_redirect( $location );
-		exit;
+		$redirect_url = is_multisite() ? network_admin_url( 'settings.php' ) : admin_url( 'options-general.php' );
+
+		if ( $update || $refresh_transients || $reset_api_key ) {
+			$query = isset( $_POST['_wp_http_referer'] ) ? parse_url( $_POST['_wp_http_referer'], PHP_URL_QUERY ) : null;
+			parse_str( $query, $arr );
+			$arr['tab'] = ! empty( $arr['tab'] ) ? $arr['tab'] : 'github_updater_settings';
+
+			$location = add_query_arg(
+				array(
+					'page'               => 'github-updater',
+					'tab'                => $arr['tab'],
+					'refresh_transients' => $refresh_transients,
+					'reset'              => $reset_api_key,
+					'updated'            => $update,
+				),
+				$redirect_url
+			);
+			wp_redirect( $location );
+			exit;
+		}
 	}
 
 	/**
@@ -780,6 +801,21 @@ class Settings extends Base {
 			$_POST                     = $_REQUEST;
 			$_POST['_wp_http_referer'] = $_SERVER['HTTP_REFERER'];
 			delete_site_option( 'github_updater_api_key' );
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Clear GitHub Updater transients.
+	 *
+	 * @return bool
+	 */
+	private function refresh_transients() {
+		if ( isset( $_REQUEST['github_updater_refresh_transients'] ) ) {
+			$_POST = $_REQUEST;
 
 			return true;
 		}
