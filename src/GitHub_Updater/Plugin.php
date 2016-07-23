@@ -63,6 +63,8 @@ class Plugin extends Base {
 
 	/**
 	 * Returns an array of configurations for the known plugins.
+	 *
+	 * @return array
 	 */
 	public function get_plugin_configs() {
 		return $this->config;
@@ -193,7 +195,6 @@ class Plugin extends Base {
 				$git_plugin['name']                    = $plugin_data['Name'];
 				$git_plugin['local_version']           = strtolower( $plugin_data['Version'] );
 				$git_plugin['sections']['description'] = $plugin_data['Description'];
-				$git_plugin['private']                 = true;
 				$git_plugin['dot_org']                 = false;
 			}
 			if ( isset( $all_plugins[ $plugin ]->id ) ) {
@@ -207,14 +208,8 @@ class Plugin extends Base {
 	}
 
 	/**
-	 * Get remote plugin meta to populate $config plugin objects. 
+	 * Get remote plugin meta to populate $config plugin objects.
 	 * Calls to remote APIs to get data.
-	 *
-	 * Note: Bitbucket Cloud (https://bitbucket.org) and Bitbucket Server
-	 * have different API's and therefore finding an enterprise_api will
-	 * load a different class for use with Bitbucket Server. 
-	 * 
-	 *
 	 */
 	public function get_remote_plugin_meta() {
 		foreach ( (array) $this->config as $plugin ) {

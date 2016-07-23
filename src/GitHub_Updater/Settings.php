@@ -408,27 +408,23 @@ class Settings extends Base {
 	 */
 	public function ghu_tokens() {
 		$ghu_options_keys = array();
-		$plugin           = get_site_transient( 'ghu_plugins' );
-		$theme            = get_site_transient( 'ghu_themes' );
-		if ( ! $plugin ) {
-			$plugin = Plugin::instance();
-			$plugin->get_remote_plugin_meta();
-			set_site_transient( 'ghu_plugins', $plugin, ( self::$hours * HOUR_IN_SECONDS ) );
-
-		}
-		if ( ! $theme ) {
-			$theme = Theme::instance();
-			$theme->get_remote_theme_meta();
-			set_site_transient( 'ghu_themes', $theme, ( self::$hours * HOUR_IN_SECONDS ) );
-		}
-		$ghu_plugins = $plugin->config;
-		$ghu_themes  = $theme->config;
-		$ghu_tokens  = array_merge( $ghu_plugins, $ghu_themes );
+		$ghu_plugins      = Plugin::instance()->get_plugin_configs();
+		$ghu_themes       = Theme::instance()->get_theme_configs();
+		$ghu_tokens       = array_merge( $ghu_plugins, $ghu_themes );
 
 		foreach ( $ghu_tokens as $token ) {
 			$type                             = '<span class="dashicons dashicons-admin-plugins"></span>&nbsp;';
 			$setting_field                    = array();
 			$ghu_options_keys[ $token->repo ] = null;
+
+			/*
+			 * Set defaults if repo_meta not set and no update available.
+			 */
+			if ( empty( $token->repo_meta ) ) {
+				$defaults = $this->set_defaults( $token->type );
+				unset( $defaults['repo'] );
+				$token = (object) array_merge( (array) $token, $defaults );
+			}
 
 			/*
 			 * Set boolean for Enterprise headers.
