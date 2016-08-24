@@ -53,7 +53,7 @@ class Settings extends Base {
 		$this->ensure_api_key_is_set();
 
 		add_action( is_multisite() ? 'network_admin_menu' : 'admin_menu', array( &$this, 'add_plugin_page' ) );
-		add_action( 'network_admin_edit_github-updater', array( &$this, 'update_network_setting' ) );
+		add_action( 'network_admin_edit_github-updater', array( &$this, 'update_settings' ) );
 		add_action( 'admin_init', array( &$this, 'page_init' ) );
 		add_action( 'admin_init', array( &$this, 'remote_management_page_init' ) );
 
@@ -61,13 +61,6 @@ class Settings extends Base {
 			&$this,
 			'plugin_action_links',
 		) );
-
-		// Make sure array values exist.
-		foreach ( array_keys( self::$remote_management ) as $key ) {
-			if ( empty( parent::$options_remote[ $key ] ) ) {
-				parent::$options_remote[ $key ] = null;
-			}
-		}
 	}
 
 	/**
@@ -393,12 +386,7 @@ class Settings extends Base {
 			);
 		}
 
-		if ( isset( $_POST['github_updater'] ) && ! is_multisite() ) {
-			$options = get_site_option( 'github_updater' );
-			$options = array_merge( $options, self::sanitize( $_POST['github_updater'] ) );
-			update_site_option( 'github_updater', $options );
-			$this->redirect_on_save();
-		}
+		$this->update_settings();
 	}
 
 	/**
@@ -416,15 +404,7 @@ class Settings extends Base {
 			$type                             = '<span class="dashicons dashicons-admin-plugins"></span>&nbsp;';
 			$setting_field                    = array();
 			$ghu_options_keys[ $token->repo ] = null;
-
-			/*
-			 * Set defaults if repo_meta not set and no update available.
-			 */
-			if ( empty( $token->repo_meta ) ) {
-				$defaults = $this->set_defaults( $token->type );
-				unset( $defaults['repo'] );
-				$token = (object) array_merge( (array) $token, $defaults );
-			}
+			$token->private                   = isset( $token->private ) ? $token->private : true;
 
 			/*
 			 * Set boolean for Enterprise headers.
@@ -574,17 +554,7 @@ class Settings extends Base {
 			);
 		}
 
-		if ( isset( $_POST['option_page'] ) && 'github_updater_remote_management' === $_POST['option_page'] ) {
-			$options = array();
-			foreach ( array_keys( self::$remote_management ) as $key ) {
-				$options[ $key ] = null;
-			}
-			if ( isset( $_POST['github_updater_remote_management'] ) ) {
-				$options = array_replace( $options, (array) self::sanitize( $_POST['github_updater_remote_management'] ) );
-			}
-			update_site_option( 'github_updater_remote_management', $options );
-		}
-		$this->redirect_on_save();
+		$this->update_settings();
 	}
 
 	/**
@@ -697,9 +667,10 @@ class Settings extends Base {
 	 * @param $args
 	 */
 	public function token_callback_checkbox( $args ) {
+		$checked = isset( parent::$options[ $args['id'] ] ) ? parent::$options[ $args['id'] ] : null;
 		?>
 		<label for="<?php esc_attr_e( $args['id'] ); ?>">
-			<input type="checkbox" name="github_updater[<?php esc_attr_e( $args['id'] ); ?>]" value="1" <?php checked( '1', parent::$options[ $args['id'] ], true ); ?> >
+			<input type="checkbox" name="github_updater[<?php esc_attr_e( $args['id'] ); ?>]" value="1" <?php checked( '1', $checked, true ); ?> >
 		</label>
 		<?php
 	}
@@ -713,36 +684,29 @@ class Settings extends Base {
 	 * @return bool|void
 	 */
 	public function token_callback_checkbox_remote( $args ) {
+		$checked = isset( parent::$options_remote[ $args['id'] ] ) ? parent::$options_remote[ $args['id'] ] : null;
 		?>
 		<label for="<?php esc_attr_e( $args['id'] ); ?>">
-			<input type="checkbox" name="github_updater_remote_management[<?php esc_attr_e( $args['id'] ); ?>]" value="1" <?php checked( '1', parent::$options_remote[ $args['id'] ], true ); ?> >
+			<input type="checkbox" name="github_updater_remote_management[<?php esc_attr_e( $args['id'] ); ?>]" value="1" <?php checked( '1', $checked, true ); ?> >
 		</label>
 		<?php
 	}
 
 	/**
-	 * Update network settings.
-	 * Used when plugin is network activated to save settings.
+	 * Update settings for single site or network activated.
 	 *
 	 * @link http://wordpress.stackexchange.com/questions/64968/settings-api-in-multisite-missing-update-message
 	 * @link http://benohead.com/wordpress-network-wide-plugin-settings/
 	 */
-	public function update_network_setting() {
-
-		if ( 'github_updater' === $_POST['option_page'] ) {
-			update_site_option( 'github_updater', self::sanitize( $_POST['github_updater'] ) );
-		}
-		if ( 'github_updater_remote_management' === $_POST['option_page'] ) {
-			$options = array();
-			foreach ( array_keys( self::$remote_management ) as $key ) {
-				$options[ $key ] = null;
+	public function update_settings() {
+		if ( isset( $_POST['option_page'] ) ) {
+			if ( 'github_updater' === $_POST['option_page'] ) {
+				update_site_option( 'github_updater', self::sanitize( $_POST['github_updater'] ) );
 			}
-			if ( isset( $_POST['github_updater_remote_management'] ) ) {
-				$options = array_replace( $options, (array) self::sanitize( $_POST['github_updater_remote_management'] ) );
+			if ( 'github_updater_remote_management' === $_POST['option_page'] ) {
+				update_site_option( 'github_updater_remote_management', (array) self::sanitize( $_POST['github_updater_remote_management'] ) );
 			}
-			update_site_option( 'github_updater_remote_management', $options );
 		}
-
 		$this->redirect_on_save();
 	}
 

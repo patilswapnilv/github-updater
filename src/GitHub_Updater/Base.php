@@ -144,6 +144,7 @@ class Base {
 		add_filter( 'extra_theme_headers', array( &$this, 'add_headers' ) );
 		add_filter( 'extra_plugin_headers', array( &$this, 'add_headers' ) );
 		add_filter( 'http_request_args', array( 'Fragen\\GitHub_Updater\\API', 'http_request_args' ), 10, 2 );
+		add_filter( 'http_request_args', array( 'Fragen\\GitHub_Updater\\Bitbucket_API', 'ajax_maybe_authenticate_http' ), 15, 2 );
 		add_filter( 'upgrader_source_selection', array( &$this, 'upgrader_source_selection' ), 10, 4 );
 	}
 
@@ -305,8 +306,6 @@ class Base {
 	 * Set default values for plugin/theme.
 	 *
 	 * @param $type
-	 *
-	 * @return array Repo defaults.
 	 */
 	protected function set_defaults( $type ) {
 		if ( ! isset( self::$options['branch_switch'] ) ) {
@@ -345,8 +344,6 @@ class Base {
 		$this->$type->requires_wp_version  = '3.8.0';
 		$this->$type->requires_php_version = '5.3';
 		$this->$type->release_asset        = false;
-
-		return (array) $this->$type;
 	}
 
 	/**
@@ -506,7 +503,7 @@ class Base {
 
 		/*
 		 * Directory is misnamed to start.
-		 * Make cause deactivation.
+		 * May cause deactivation.
 		 */
 		if ( ! array_key_exists( $slug, (array) $upgrader_object->config ) &&
 		     ! isset( self::$options['github_updater_install_repo'] )
@@ -533,7 +530,7 @@ class Base {
 		/*
 		 * Revert extended naming if previously present.
 		 */
-		if ( $this instanceof Plugin &&
+		if ( $upgrader_object instanceof Plugin &&
 		     ( ! defined( 'GITHUB_UPDATER_EXTENDED_NAMING' ) || ! GITHUB_UPDATER_EXTENDED_NAMING ) &&
 		     $slug !== $repo['repo']
 		) {
@@ -544,10 +541,10 @@ class Base {
 		 * Extended naming.
 		 * Only for plugins and not for 'master' === branch && .org hosted.
 		 */
-		if ( $this instanceof Plugin &&
+		if ( $upgrader_object instanceof Plugin &&
 		     ( defined( 'GITHUB_UPDATER_EXTENDED_NAMING' ) && GITHUB_UPDATER_EXTENDED_NAMING ) &&
-		     ( ! $this->config[ $repo['repo'] ]->dot_org ||
-		       ( $this->tag && 'master' !== $this->tag ) )
+		     ( ! $upgrader_object->config[ $repo['repo'] ]->dot_org ||
+		       ( $upgrader_object->tag && 'master' !== $upgrader_object->tag ) )
 		) {
 			$new_source = trailingslashit( $remote_source ) . $repo['extended_repo'];
 			printf( esc_html__( 'Rename successful using extended name to %1$s', 'github-updater' ) . '&#8230;<br>',
@@ -991,13 +988,8 @@ class Base {
 
 			return empty( $options['branch_switch'] );
 		}
-		if ( ! isset( $_GET['refresh_transients'] ) ) {
-			if ( ! $response && ! $this->can_update( $this->type ) ) {
-				return true;
-			}
-		}
 
-		return false;
+		return ( ! isset( $_GET['refresh_transients'] ) && ! $response && ! $this->can_update( $this->type ) );
 	}
 
 	/**
@@ -1061,14 +1053,16 @@ class Base {
 			$repo_base = dirname( $repo_name );
 		}
 
-		$open = '<tr class="plugin-update-tr" data-slug="' . esc_attr( $repo_base ) . '" data-plugin="' . esc_attr( $repo_name ) . '"><td colspan="' . $wp_list_table->get_column_count() . '" class="plugin-update colspanchange"><div class="update-message">';
+		$open = '<tr class="plugin-update-tr" data-slug="' . esc_attr( $repo_base ) . '" data-plugin="' . esc_attr( $repo_name ) . '">
+		<td colspan="' . $wp_list_table->get_column_count() . '" class="plugin-update colspanchange">
+		<div class="update-message">';
 
 		$enclosure = array(
 			'open'  => $open,
 			'close' => '</div></td></tr>',
 		);
 
-		if ( version_compare( $wp_version, '4.6-alpha-37714', '>=' ) ) {
+		if ( version_compare( $wp_version, '4.6', '>=' ) ) {
 			$open_p  = '<p>';
 			$close_p = '</p>';
 			if ( $branch_switcher ) {
@@ -1104,6 +1098,24 @@ class Base {
 			) );
 
 		return $update_url;
+	}
+
+	/**
+	 * Checks to see if a heartbeat is resulting in activity.
+	 *
+	 * @return bool
+	 */
+	protected static function is_heartbeat() {
+		return ( isset( $_POST['action'] ) && 'heartbeat' === $_POST['action'] );
+	}
+
+	/**
+	 * Checks to see if DOING_AJAX.
+	 *
+	 * @return bool
+	 */
+	protected static function is_doing_ajax() {
+		return ( defined( 'DOING_AJAX') && DOING_AJAX);
 	}
 
 }
