@@ -49,7 +49,7 @@ class Install extends Base {
 	/**
 	 * Install remote plugin or theme.
 	 *
-	 * @param $type
+	 * @param string $type
 	 *
 	 * @return bool
 	 */
@@ -239,7 +239,7 @@ class Install extends Base {
 	/**
 	 * Create Install Plugin or Install Theme page.
 	 *
-	 * @param $type
+	 * @param string $type
 	 */
 	public function create_form( $type ) {
 		$this->register_settings( $type );
@@ -262,7 +262,7 @@ class Install extends Base {
 	/**
 	 * Add settings sections.
 	 *
-	 * @param $type
+	 * @param string $type
 	 */
 	public function register_settings( $type ) {
 
