@@ -1,5 +1,6 @@
 #### [unreleased]
 * added reset of _update\_plugins_ and _update\_themes_ transient with _Refresh Transients_
+* bump
 
 #### 5.6.1 / 2016-09-15
 * fixed PHP notices when parsing `readme.txt` with missing data
