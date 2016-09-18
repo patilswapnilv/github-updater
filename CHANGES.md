@@ -1,15 +1,25 @@
 #### [unreleased]
+* added reset of _update\_plugins_ and _update\_themes_ transient with _Refresh Transients_
+
+#### 5.6.1 / 2016-09-15
+* fixed PHP notices when parsing `readme.txt` with missing data
+* fixed PHP fatal by namespacing `class WordPressdotorg\Plugin_Directory\Readme\Parser`
+* fixed PHP fatal in `WordPressdotorg\Plugin_Directory\Readme\Parser` by avoiding dereferenced array call
+
+#### 5.6.0 / 2016-09-14
 * added `Refresh Transients` button to Settings page because the `Check Again` button is going away
 * added `redirect_on_save()` for Settings page
-* switched to modified version of [wp.org plugin readme parser](https://meta.trac.wordpress.org/browser/sites/trunk/wordpress.org/public_html/wp-content/plugins/plugin-directory/readme/class-parser.php), now accepts _Markdownified_ readme.txt files
+* switched to slightly modified version of [wp.org plugin readme parser](https://meta.trac.wordpress.org/browser/sites/trunk/wordpress.org/public_html/wp-content/plugins/plugin-directory/readme/class-parser.php), now accepts _Markdownified_ readme.txt files
 * fixed re-activation of RESTful plugin update, multisite vs single site
 * when creating Settings page, check current Plugin/Theme class instance, not transient. Fixes issue where remote install of private repo not having private settings saved.
 * fixed PHP errors in Settings page
-* fixed saving issues with checkboxes
+* fixed saving issues with checkboxes during remote install of private Bitbucket repo
 * added one day dismissal of admin notices using [persist-admin-notices-dismissal library](https://github.com/collizo4sky/persist-admin-notices-dismissal)
 * Settings page now uses same function to update settings for both single/multisite
 * temporary fix for AJAX updates of private Bitbucket repos [#432](https://github.com/afragen/github-updater/issues/432), can only do one per page load, not very AJAXy :P
 * fixed `class Rest_Update` to avoid potential race conditions when RESTful endpoint is used as a webhook
+* added `branch` and `branches` to update transient, might be able to use this in RESTful update sometime
+* fixed extended naming when installing forks of plugins and plugins
 
 #### 5.5.0 / 2016-07-02
 * better internationalization for changing plugin _View details_ link
@@ -121,7 +131,7 @@
 * updated POT file
 
 #### 5.0.1 / 2015-08-18
-* updated to current `erusev/p``arsedown` release, fixes PHP7 issue
+* updated to current `erusev/parsedown` release, fixes PHP7 issue
 * updated to current `WPupdatePHP/wp-update-php/release-1-1-0` branch
 
 #### 5.0.0 / 2015-08-15
@@ -481,7 +491,7 @@
 * refactored `class GitHub_Plugin_Updater` and `class GitHub_Theme_Updater` to use stdClass objects
 * further refactored base class `GitHub_Updater` to contain renaming code and create stdClass objects for data.
 * added some ability to see changelog for GitHub hosted plugins.
-* trying to follow <a href="https://github.com/tommcfarlin/WordPress-Plugin-Boilerplate">WordPress Plugin Boilerplate</a>, so renamed `classes` to `includes`
+* trying to follow [WordPress Plugin Boilerplate](https://github.com/tommcfarlin/WordPress-Plugin-Boilerplate), so renamed `classes` to `includes`
 * refactored putting all remote api calls in new `class GitHub_Plugin_Updater_API`.
 * Theme updating should now be able to have a specified branch.
 * works on WordPress 3.8

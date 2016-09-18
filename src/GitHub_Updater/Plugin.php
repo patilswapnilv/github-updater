@@ -195,10 +195,7 @@ class Plugin extends Base {
 				$git_plugin['name']                    = $plugin_data['Name'];
 				$git_plugin['local_version']           = strtolower( $plugin_data['Version'] );
 				$git_plugin['sections']['description'] = $plugin_data['Description'];
-				$git_plugin['dot_org']                 = false;
-			}
-			if ( isset( $all_plugins[ $plugin ]->id ) ) {
-				$git_plugin['dot_org'] = true;
+				$git_plugin['dot_org']                 = isset( $all_plugins[ $plugin ]->id ) ? true : false;
 			}
 
 			$git_plugins[ $git_plugin['repo'] ] = (object) $git_plugin;
@@ -468,6 +465,8 @@ class Plugin extends Base {
 					'new_version' => $plugin->remote_version,
 					'url'         => $plugin->uri,
 					'package'     => $plugin->download_link,
+					'branch'      => $plugin->branch,
+					'branches'    => array_keys( $plugin->branches ),
 				);
 
 				/*

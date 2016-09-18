@@ -9,6 +9,7 @@
  */
 
 namespace Fragen\GitHub_Updater;
+use WordPressdotorg\Plugin_Directory\Readme\Parser as Parser;
 
 /*
  * Exit if called directly.
@@ -22,7 +23,7 @@ if ( ! defined( 'WPINC' ) ) {
  *
  * @package Fragen\GitHub_Updater
  */
-class Readme_Parser extends \Parser {
+class Readme_Parser extends Parser {
 
 	/**
 	 * Constructor.
@@ -69,24 +70,6 @@ class Readme_Parser extends \Parser {
 	 */
 	protected function sanitize_contributors( $users ) {
 		return $users;
-	}
-
-	/**
-	 * @access protected
-	 *
-	 * @param string|array $text
-	 *
-	 * @return string
-	 */
-	protected function sanitize_text( $text ) { // not fancy
-		if ( is_array( $text ) ) {
-			$text = implode( "\n", $text );
-		}
-		$text = strip_tags( $text );
-		$text = esc_html( $text );
-		$text = trim( $text );
-
-		return $text;
 	}
 
 }

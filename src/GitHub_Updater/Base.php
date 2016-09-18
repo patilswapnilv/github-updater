@@ -341,7 +341,7 @@ class Base {
 		$this->$type->forks                = 0;
 		$this->$type->open_issues          = 0;
 		$this->$type->score                = 0;
-		$this->$type->requires_wp_version  = '3.8.0';
+		$this->$type->requires_wp_version  = '4.0';
 		$this->$type->requires_php_version = '5.3';
 		$this->$type->release_asset        = false;
 	}
@@ -497,7 +497,7 @@ class Base {
 		 * Remote install source.
 		 */
 		if ( isset( self::$options['github_updater_install_repo'] ) ) {
-			$repo['repo'] = self::$options['github_updater_install_repo'];
+			$repo['repo'] = $repo['extended_repo'] = self::$options['github_updater_install_repo'];
 			$new_source   = trailingslashit( $remote_source ) . self::$options['github_updater_install_repo'];
 		}
 
@@ -543,8 +543,10 @@ class Base {
 		 */
 		if ( $upgrader_object instanceof Plugin &&
 		     ( defined( 'GITHUB_UPDATER_EXTENDED_NAMING' ) && GITHUB_UPDATER_EXTENDED_NAMING ) &&
-		     ( ! $upgrader_object->config[ $repo['repo'] ]->dot_org ||
-		       ( $upgrader_object->tag && 'master' !== $upgrader_object->tag ) )
+		     ( ( isset( $upgrader_object->config[ $repo['repo'] ] ) &&
+		         ! $upgrader_object->config[ $repo['repo'] ]->dot_org ) ||
+		       ( $upgrader_object->tag && 'master' !== $upgrader_object->tag ) ||
+		       isset( self::$options['github_updater_install_repo'] ) )
 		) {
 			$new_source = trailingslashit( $remote_source ) . $repo['extended_repo'];
 			printf( esc_html__( 'Rename successful using extended name to %1$s', 'github-updater' ) . '&#8230;<br>',
@@ -785,6 +787,7 @@ class Base {
 			delete_site_transient( $transient );
 		}
 		delete_site_transient( 'ghu-' . $type );
+		set_site_transient( 'update_' . $type, null );
 
 		return true;
 	}
@@ -943,10 +946,10 @@ class Base {
 		unset( $response['sections']['screenshots'] );
 		unset( $response['sections']['installation'] );
 		$this->type->sections     = array_merge( (array) $this->type->sections, (array) $response['sections'] );
-		$this->type->tested       = $response['tested'];
-		$this->type->requires     = $response['requires'];
-		$this->type->donate_link  = $response['donate_link'];
-		$this->type->contributors = $response['contributors'];
+		$this->type->tested       = isset( $response['tested'] ) ? $response['tested'] : null;
+		$this->type->requires     = isset( $response['requires'] ) ? $response['requires'] : null;
+		$this->type->donate_link  = isset( $response['donate_link'] ) ? $response['donate_link'] : null;
+		$this->type->contributors = isset( $response['contributors'] ) ? $response['contributors'] : null;
 
 		return true;
 	}
@@ -1098,24 +1101,6 @@ class Base {
 			) );
 
 		return $update_url;
-	}
-
-	/**
-	 * Checks to see if a heartbeat is resulting in activity.
-	 *
-	 * @return bool
-	 */
-	protected static function is_heartbeat() {
-		return ( isset( $_POST['action'] ) && 'heartbeat' === $_POST['action'] );
-	}
-
-	/**
-	 * Checks to see if DOING_AJAX.
-	 *
-	 * @return bool
-	 */
-	protected static function is_doing_ajax() {
-		return ( defined( 'DOING_AJAX') && DOING_AJAX);
 	}
 
 }

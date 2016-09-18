@@ -1,5 +1,5 @@
 # GitHub Updater
-Contributors: afragen, garyj, sethmatics
+Contributors: afragen, garyj, sethmatics, limikael
 Donate link: http://thefragens.com/github-updater-donate
 Tags: plugin, theme, update, updater, github, bitbucket, gitlab, remote install
 Requires at least: 4.0
@@ -15,11 +15,13 @@ This plugin was designed to simply update any GitHub hosted WordPress plugin or 
 Your plugin or theme **must** contain a header in the style.css header or in the plugin's header denoting the location on GitHub. The format is as follows.
 
 `GitHub Plugin URI: afragen/github-updater`
+
 `GitHub Plugin URI: https://github.com/afragen/github-updater`
 
 or
 
 `GitHub Theme URI: afragen/test-child`
+
 `GitHub Theme URI: https://github.com/afragen/test-child`
 
 ...where the above URI leads to the __owner/repository__ of your theme or plugin. The URI may be in the format `https://github.com/<owner>/<repo>` or the short format `<owner>/<repo>`. You do not need both. Only one Plugin or Theme URI is required. You **must not** include any extensions like `.git`.
@@ -48,11 +50,11 @@ The following headers are available for use depending upon your hosting source.
 
 There are two **optional** headers for setting minimum requirements for both WordPress and PHP.
 
-Use `Requires WP:` to set the minimum required version of WordPress needed for your plugin or theme. eg. `Requires WP: 3.8`
+Use `Requires WP:` to set the minimum required version of WordPress needed for your plugin or theme. eg. `Requires WP: 4.0`
 
 Use `Requires PHP:` to set the minimum required version of PHP needed for your plugin or theme. eg. `Requires PHP: 5.3.0`
 
-At the moment the default values are **WordPress 3.8.0** and **PHP 5.3.0**
+At the moment the default values are **WordPress 4.0** and **PHP 5.3.0**
 
 ## Release Assets
 
