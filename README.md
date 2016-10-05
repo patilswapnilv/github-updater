@@ -14,7 +14,7 @@
 * License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 
-A simple plugin to enable automatic updates to your GitHub, Bitbucket, or GitLab hosted WordPress plugins and themes. It also allows for the remote installation of plugins or themes.
+A simple plugin to enable automatic updates to your GitHub, Bitbucket, or GitLab hosted WordPress plugins, themes, and language packs. It also allows for the remote installation of plugins or themes.
 
 This plugin is [not allowed in the wp.org repo](https://github.com/afragen/github-updater/issues/34). :frowning:
 
@@ -92,26 +92,27 @@ This way you get automatic updates and cannot deactivate the plugin.
 There must be a `GitHub Plugin URI`, `Bitbucket Plugin URI`, or `GitLab Plugin URI` declaration in the plugin's header.
 
 ~~~php
-/*
-Plugin Name:       GitHub Updater
-Plugin URI:        https://github.com/afragen/github-updater
-Description:       A plugin to automatically update GitHub, Bitbucket or GitLab hosted plugins and themes. It also allows for remote installation of plugins or themes into WordPress.
-Version:           1.0.0
-Author:            Andy Fragen
-License:           GNU General Public License v2
-License URI:       http://www.gnu.org/licenses/gpl-2.0.html
-Domain Path:       /languages
-Text Domain:       github-updater
-GitHub Plugin URI: https://github.com/afragen/github-updater
-GitHub Branch:     master
-*/
+/**
+ * Plugin Name:       GitHub Updater
+ * Plugin URI:        https://github.com/afragen/github-updater
+ * Description:       A plugin to automatically update GitHub, Bitbucket or GitLab hosted plugins and themes. It also allows for remote installation of plugins or themes into WordPress.
+ * Version:           1.0.0
+ * Author:            Andy Fragen
+ * License:           GNU General Public License v2
+ * License URI:       http://www.gnu.org/licenses/gpl-2.0.html
+ * Domain Path:       /languages
+ * Text Domain:       github-updater
+ * GitHub Plugin URI: https://github.com/afragen/github-updater
+ * GitHub Branch:     master
+ * GitHub Languages:  https://github.com/afragen/github-updater-translations
+ */
 ~~~
 
 ### Themes
 
 There must be a `GitHub Theme URI`, `Bitbucket Theme URI`, or `GitLab Theme URI` declaration in the `style.css` file. When initially adding a theme, the directory **must** be identical to the repo name.
 
-~~~php
+~~~css
 /*
 Theme Name:       Test
 Theme URI:        http://thefragens.net/
@@ -124,6 +125,20 @@ GitHub Theme URI: https://github.com/afragen/test-child
 GitHub Branch:    master
 */
 ~~~
+
+### Language Packs
+
+A separate git hosted repository may be used for updating Language Packs. This repository must be a public repository. What's the point of putting translation files in a private repository.
+
+Simply add the header `GitHub Languages`, `Bitbucket Languages`, or `GitLab Languages` to the headers of the plugin or theme. The URI for this header are in the same format as for the plugins or themes.
+
+Example, `GitHub Languages: https://github.com/afragen/github-updater-translations`
+
+In order to create your Language Pack repository. You will need to install and use the [Language Pack Maker](https://github.com/afragen/github-updater-language-pack-maker). You will need to follow those directions to create a properly formatted language pack repository. All translation files must be in branch `master`.
+
+See [GitHub Updater Translations](https://github.com/afragen/github-updater-translations) as an example. I have set `.gitignore` to hide the `vendor` directory.
+
+Many thanks to [Ulrich Pogson](https://github.com/grappler).
 
 ### Optional Headers
 
@@ -227,11 +242,11 @@ Do not include your username or password in the plugin or theme URI.
 
 There are two **optional** headers for setting minimum requirements for both WordPress and PHP.
 
-Use `Requires WP:` to set the minimum required version of WordPress needed for your plugin or theme. eg. `Requires WP: 3.8`
+Use `Requires WP:` to set the minimum required version of WordPress needed for your plugin or theme. eg. `Requires WP: 4.0`
 
-Use `Requires PHP:` to set the minimum required version of PHP needed for your plugin or theme. eg. `Requires PHP: 5.3.0`
+Use `Requires PHP:` to set the minimum required version of PHP needed for your plugin or theme. eg. `Requires PHP: 5.3`
 
-At the moment the default values are **WordPress 3.8.0** and **PHP 5.3.0**
+At the moment the default values are **WordPress 4.0** and **PHP 5.3**
 
 ## Release Assets
 
@@ -242,6 +257,8 @@ Use `Release Asset:`. eg., `Release Asset: true`.
 Your release asset filename is generated automatically and **must** have the following format or there will be an update error.
 
 Example, `$repo-$tag.zip` where `$repo` is the repository slug and `$tag` is the newest release tag, example `test-plugin-0.7.3.zip`.
+
+There is support for [GitLab Build Artifacts](https://gitlab.com/help/user/project/builds/artifacts.md) which may be used as a release asset. You must also add the header, `GitLab CI Job:`, with the build job name.
 
 **You must tag your releases to use this feature.**
 
@@ -383,6 +400,8 @@ add_filter( 'github_updater_hide_settings', '__return_true' );
 You can use the [GitHub Updater Additions](https://github.com/afragen/github-updater-additions) plugin to add plugins or themes that don't contain the proper headers via a JSON file. They can then be updated with GitHub Updater.
 
 ### Translations
+
+Please submit translation PRs to [GitHub Updater Translations](https://github.com/afragen/github-updater-translations). This will allow me to keep language pack updates decoupled and independent of the main plugin and much more timely.
 
 * French by
     * [Daniel Ménard](https://github.com/daniel-menard)

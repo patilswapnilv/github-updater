@@ -136,9 +136,15 @@ class Plugin extends Base {
 			foreach ( (array) self::$extra_headers as $value ) {
 				$repo_enterprise_uri = null;
 				$repo_enterprise_api = null;
+				$repo_languages      = null;
+
+				if ( in_array( $value, array( 'Requires PHP', 'Requires WP' ) ) ) {
+					continue;
+				}
 
 				if ( empty( $headers[ $value ] ) ||
-				     false === stristr( $value, 'Plugin' )
+				     ( false === stristr( $value, 'Plugin' ) &&
+				       false === stristr( $value, 'Languages' ) )
 				) {
 					continue;
 				}
@@ -155,7 +161,18 @@ class Plugin extends Base {
 					if ( array_key_exists( $repo_parts[ $part ], $headers ) &&
 					     ! empty( $headers[ $repo_parts[ $part ] ] )
 					) {
-						$repo_enterprise_uri = $headers[ $repo_parts[ $part ] ];
+						switch ( $part ) {
+							case 'languages':
+								$repo_languages = $headers[ $repo_parts[ $part ] ];
+								break;
+							case 'enterprise':
+							case 'gitlab_ce':
+								$repo_enterprise_uri = $headers[ $repo_parts[ $part ] ];
+								break;
+							case 'ci_job':
+								$repo_ci_job = $headers[ $repo_parts[ $part ] ];
+								break;
+						}
 					}
 				}
 
@@ -196,6 +213,9 @@ class Plugin extends Base {
 				$git_plugin['local_version']           = strtolower( $plugin_data['Version'] );
 				$git_plugin['sections']['description'] = $plugin_data['Description'];
 				$git_plugin['dot_org']                 = isset( $all_plugins[ $plugin ]->id ) ? true : false;
+				$git_plugin['languages']               = ! empty( $repo_languages ) ? $repo_languages : null;
+				$git_plugin['ci_job']                  = ! empty( $repo_ci_job ) ? $repo_ci_job : null;
+				$git_plugin['release_asset']           = true == $plugin_data['Release Asset'] ? true : false;
 			}
 
 			$git_plugins[ $git_plugin['repo'] ] = (object) $git_plugin;
@@ -237,7 +257,7 @@ class Plugin extends Base {
 				set_site_transient( 'update_plugins', $updates_transient );
 			}
 
-			if ( ! is_multisite() || is_network_admin() ) {
+			if ( ( ! is_multisite() || is_network_admin() ) && ! $plugin->release_asset ) {
 				add_action( "after_plugin_row_$plugin->slug", array( &$this, 'plugin_branch_switcher' ), 15, 3 );
 			}
 		}
@@ -299,7 +319,7 @@ class Plugin extends Base {
 		echo $enclosure['open'];
 		printf( esc_html__( 'Current branch is `%1$s`, try %2$sanother branch%3$s.', 'github-updater' ),
 			$branch,
-			'<a href="#" onclick="jQuery(\'#' . $id . '\').toggle();return false;">',
+			'<a href="javascript:jQuery(\'#' . $id . '\').toggle()">',
 			'</a>'
 		);
 
@@ -431,7 +451,7 @@ class Plugin extends Base {
 					$contributors[ $contributor ] = '//profiles.wordpress.org/' . $contributor;
 				}
 				$response->contributors = $contributors;
-				if ( ! $plugin->private ) {
+				if ( ! $this->is_private( $plugin ) ) {
 					$response->num_ratings = $plugin->num_ratings;
 					$response->rating      = $plugin->rating;
 				}

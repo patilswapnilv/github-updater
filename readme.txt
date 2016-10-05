@@ -1,7 +1,7 @@
 # GitHub Updater
 Contributors: afragen, garyj, sethmatics, limikael
 Donate link: http://thefragens.com/github-updater-donate
-Tags: plugin, theme, update, updater, github, bitbucket, gitlab, remote install
+Tags: plugin, theme, language pack, updater, remote install
 Requires at least: 4.0
 Tested up to: 4.6
 Stable tag: master
@@ -33,11 +33,13 @@ The following headers are available for use depending upon your hosting source.
 * GitHub Theme URI
 * GitHub Branch
 * GitHub Enterprise
+* GitHub Languages
 
 ###Bitbucket
 * Bitbucket Plugin URI
 * Bitbucket Theme URI
 * Bitbucket Branch
+* Bitbucket Languages
 
 ###GitLab
 * GitLab Plugin URI
@@ -45,6 +47,8 @@ The following headers are available for use depending upon your hosting source.
 * GitLab Branch
 * GitLab Enterprise
 * GitLab CE
+* GitLab Languages
+* GitLab CI Job
 
 ## WordPress and PHP Requirements
 

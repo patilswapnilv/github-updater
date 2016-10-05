@@ -48,6 +48,8 @@ abstract class API extends Base {
 
 	abstract public function construct_download_link();
 
+	abstract public function get_language_pack( $headers );
+
 	abstract protected function add_endpoints( $git, $endpoint );
 
 	/**
@@ -155,13 +157,6 @@ abstract class API extends Base {
 			'owner' => $this->type->owner,
 			'repo'  => $this->type->repo,
 		);
-
-		/*
-		 * Add or filter the available segments that are used to replace placeholders.
-		 *
-		 * @param array $segments list of segments.
-		 */
-		$segments = apply_filters( 'github_updater_api_segments', $segments );
 
 		foreach ( $segments as $segment => $value ) {
 			$endpoint = str_replace( '/:' . sanitize_key( $segment ), '/' . sanitize_text_field( $value ), $endpoint );
@@ -272,6 +267,17 @@ abstract class API extends Base {
 					'downloads',
 					$this->type->repo . '-' . $this->type->newest_tag . '.zip',
 				) );
+				break;
+			case 'gitlab_plugin':
+			case 'gitlab_theme':
+				$download_link = implode( '/', array(
+					'https://gitlab.com/api/v3/projects',
+					urlencode( $this->type->owner . '/' . $this->type->repo ),
+					'builds/artifacts',
+					$this->type->newest_tag,
+					'download',
+				) );
+				$download_link = add_query_arg( 'job', $this->type->ci_job, $download_link );
 				break;
 		}
 

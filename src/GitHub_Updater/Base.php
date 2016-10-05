@@ -44,6 +44,13 @@ class Base {
 	protected $repo_api;
 
 	/**
+	 * Class Object for Language Packs.
+	 *
+	 * @var
+	 */
+	protected $languages;
+
+	/**
 	 * Variable for setting update transient hours.
 	 *
 	 * @var integer
@@ -105,6 +112,8 @@ class Base {
 		'branch'     => 'Branch',
 		'enterprise' => 'Enterprise',
 		'gitlab_ce'  => 'CE',
+		'languages'  => 'Languages',
+		'ci_job'     => 'CI Job',
 	);
 
 	/**
@@ -144,7 +153,10 @@ class Base {
 		add_filter( 'extra_theme_headers', array( &$this, 'add_headers' ) );
 		add_filter( 'extra_plugin_headers', array( &$this, 'add_headers' ) );
 		add_filter( 'http_request_args', array( 'Fragen\\GitHub_Updater\\API', 'http_request_args' ), 10, 2 );
-		add_filter( 'http_request_args', array( 'Fragen\\GitHub_Updater\\Bitbucket_API', 'ajax_maybe_authenticate_http' ), 15, 2 );
+		add_filter( 'http_request_args', array(
+			'Fragen\\GitHub_Updater\\Bitbucket_API',
+			'ajax_maybe_authenticate_http',
+		), 15, 2 );
 		add_filter( 'upgrader_source_selection', array( &$this, 'upgrader_source_selection' ), 10, 4 );
 	}
 
@@ -189,15 +201,11 @@ class Base {
 			$force_meta_update = true;
 		}
 
-		if ( current_user_can( 'update_plugins' ) ) {
-			if ( $force_meta_update ) {
-				$this->forced_meta_update_plugins();
-			}
+		if ( current_user_can( 'update_plugins' ) && $force_meta_update ) {
+			$this->forced_meta_update_plugins();
 		}
-		if ( current_user_can( 'update_themes' ) ) {
-			if ( $force_meta_update ) {
-				$this->forced_meta_update_themes();
-			}
+		if ( current_user_can( 'update_themes' ) && $force_meta_update ) {
+			$this->forced_meta_update_themes();
 		}
 		if ( is_admin() &&
 		     ( current_user_can( 'update_plugins' ) || current_user_can( 'update_themes' ) ) &&
@@ -336,7 +344,6 @@ class Base {
 		$this->$type->num_ratings          = 0;
 		$this->$type->transient            = array();
 		$this->$type->repo_meta            = array();
-		$this->$type->private              = true;
 		$this->$type->watchers             = 0;
 		$this->$type->forks                = 0;
 		$this->$type->open_issues          = 0;
@@ -397,6 +404,7 @@ class Base {
 			$this->repo_api->get_remote_readme();
 			$this->repo_api->get_remote_branches();
 			$repo->download_link = $this->repo_api->construct_download_link();
+			$this->languages     = new Language_Pack( $repo, $this->repo_api );
 		}
 
 		return true;
@@ -407,10 +415,10 @@ class Base {
 	 *
 	 * @since WordPress 4.4.0 The $hook_extra parameter became available.
 	 *
-	 * @param $source
-	 * @param $remote_source
-	 * @param $upgrader
-	 * @param $hook_extra
+	 * @param string $source
+	 * @param string $remote_source
+	 * @param object $upgrader
+	 * @param array  $hook_extra
 	 *
 	 * @return string
 	 */
@@ -554,9 +562,38 @@ class Base {
 			);
 		}
 
+		/*
+		 * Renaming if GitLab Release Asset.
+		 * It has a different download directory structure.
+		 */
+		if ( ( isset( $upgrader_object->config[ $slug ]->release_asset ) &&
+		       $upgrader_object->config[ $slug ]->release_asset ) &&
+		     ! empty( $upgrader_object->config[ $slug ]->ci_job )
+		) {
+			$new_source = trailingslashit( dirname( $remote_source ) ) . $slug;
+			add_filter( 'upgrader_post_install', array( &$this, 'upgrader_post_install' ), 10, 3 );
+		}
+
 		$wp_filesystem->move( $source, $new_source );
 
 		return trailingslashit( $new_source );
+	}
+
+	/**
+	 * Delete $source when updating from GitLab Release Asset.
+	 *
+	 * @param bool  $true
+	 * @param array $hook_extra
+	 * @param array $result
+	 *
+	 * @return mixed
+	 */
+	public function upgrader_post_install( $true, $hook_extra, $result ) {
+		global $wp_filesystem;
+
+		$wp_filesystem->delete( $result['source'], true );
+
+		return $result;
 	}
 
 	/**
@@ -663,7 +700,7 @@ class Base {
 	 *
 	 * @param $type
 	 *
-	 * @return bool or variable
+	 * @return bool|string
 	 */
 	protected function get_changelog_filename( $type ) {
 		$changelogs  = array( 'CHANGES.md', 'CHANGELOG.md', 'changes.md', 'changelog.md' );
@@ -778,6 +815,7 @@ class Base {
 	 * @return bool|void
 	 */
 	public function delete_all_transients( $type ) {
+		do_action( 'before_ghu_delete_all_transients' );
 		$transients = get_site_transient( 'ghu-' . $type );
 		if ( ! $transients ) {
 			return false;
@@ -820,7 +858,7 @@ class Base {
 		$this->type->remote_version       = strtolower( $response['Version'] );
 		$this->type->requires_php_version = ! empty( $response['Requires PHP'] ) ? $response['Requires PHP'] : $this->type->requires_php_version;
 		$this->type->requires_wp_version  = ! empty( $response['Requires WP'] ) ? $response['Requires WP'] : $this->type->requires_wp_version;
-		$this->type->release_asset        = ! empty( $response['Release Asset'] ) && 'true' === $response['Release Asset'] ? true : false;
+		$this->type->release_asset        = ! empty( $response['Release Asset'] ) && true == $response['Release Asset'] ? true : false;
 	}
 
 	/**
@@ -895,6 +933,7 @@ class Base {
 					}
 					break;
 			}
+
 		}
 
 		if ( empty( $tags ) ) {
@@ -1119,6 +1158,24 @@ class Base {
 	 */
 	protected static function is_doing_ajax() {
 		return ( defined( 'DOING_AJAX' ) && DOING_AJAX );
+	}
+
+	/**
+	 * Is this a private repo?
+	 * Test for whether remote_version is set ( default = 0.0.0 ) or
+	 * a repo option is set/not empty.
+	 *
+	 * @param object $repo
+	 *
+	 * @return bool
+	 */
+	protected function is_private( $repo ) {
+		if ( ! $this->is_doing_ajax() ) {
+			return ( isset( $repo->remote_version ) &&
+			         0 === $repo->remote_version ||
+			         ! empty( self::$options[ $repo->repo ] )
+			);
+		}
 	}
 
 }

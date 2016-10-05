@@ -242,7 +242,7 @@ class Settings extends Base {
 			array( &$this, 'token_callback_text' ),
 			'github_updater_install_settings',
 			'github_access_token',
-			array( 'id' => 'github_access_token' )
+			array( 'id' => 'github_access_token', 'token' => true )
 		);
 
 		if ( parent::$auth_required['github_enterprise'] ) {
@@ -252,7 +252,7 @@ class Settings extends Base {
 				array( &$this, 'token_callback_text' ),
 				'github_updater_install_settings',
 				'github_access_token',
-				array( 'id' => 'github_enterprise_token' )
+				array( 'id' => 'github_enterprise_token', 'token' => true )
 			);
 		}
 
@@ -288,7 +288,7 @@ class Settings extends Base {
 				array( &$this, 'token_callback_text' ),
 				'github_updater_install_settings',
 				'gitlab_settings',
-				array( 'id' => 'gitlab_private_token' )
+				array( 'id' => 'gitlab_private_token', 'token' => true )
 			);
 		}
 
@@ -299,7 +299,7 @@ class Settings extends Base {
 				array( &$this, 'token_callback_text' ),
 				'github_updater_install_settings',
 				'gitlab_settings',
-				array( 'id' => 'gitlab_enterprise_token' )
+				array( 'id' => 'gitlab_enterprise_token', 'token' => true )
 			);
 		}
 
@@ -328,7 +328,7 @@ class Settings extends Base {
 			array( &$this, 'token_callback_text' ),
 			'github_updater_install_settings',
 			'bitbucket_user',
-			array( 'id' => 'bitbucket_password' )
+			array( 'id' => 'bitbucket_password', 'token' => true )
 		);
 
 		/*
@@ -402,7 +402,6 @@ class Settings extends Base {
 			$type                             = '<span class="dashicons dashicons-admin-plugins"></span>&nbsp;';
 			$setting_field                    = array();
 			$ghu_options_keys[ $token->repo ] = null;
-			$token->private                   = isset( $token->private ) ? $token->private : true;
 
 			/*
 			 * Set boolean for Enterprise headers.
@@ -440,7 +439,7 @@ class Settings extends Base {
 			/*
 			 * Check to see if it's a private repo and set variables.
 			 */
-			if ( $token->private ) {
+			if ( $this->is_private( $token ) ) {
 				if ( false !== strpos( $token->type, 'github' ) &&
 				     ! parent::$auth_required['github_private']
 				) {
@@ -466,7 +465,7 @@ class Settings extends Base {
 			/*
 			 * Next if not a private repo or token field not empty.
 			 */
-			if ( ! $token->private && empty( parent::$options[ $token->repo ] ) ) {
+			if ( ! $this->is_private( $token ) ) {
 				continue;
 			}
 
@@ -503,7 +502,7 @@ class Settings extends Base {
 				$setting_field['callback_method'],
 				$setting_field['page'],
 				$setting_field['section'],
-				array( 'id' => $setting_field['callback'] )
+				array( 'id' => $setting_field['callback'], 'token' => true )
 			);
 		}
 
@@ -511,10 +510,32 @@ class Settings extends Base {
 		 * Unset options that are no longer present and update options.
 		 */
 		$ghu_unset_keys = array_diff_key( parent::$options, $ghu_options_keys );
+		$always_unset   = array(
+			'github_access_token',
+			'branch_switch',
+			'bitbucket_username',
+			'bitbucket_password',
+		);
 
-		foreach ( $ghu_unset_keys as $unset_key => $value ) {
-			unset( $ghu_unset_keys[ $unset_key ] );
-		}
+		array_filter( $always_unset,
+			function( $e ) use ( &$ghu_unset_keys ) {
+				unset( $ghu_unset_keys[ $e ] );
+			} );
+
+		$auth_required       = parent::$auth_required;
+		$auth_required_unset = array(
+			'github_enterprise' => 'github_enterprise_token',
+			'gitlab'            => 'gitlab_private_token',
+			'gitlab_enterprise' => 'gitlab_enterprise_token',
+		);
+
+		array_filter( $auth_required_unset,
+			function( $e ) use ( &$ghu_unset_keys, $auth_required, $auth_required_unset ) {
+				$key = array_search( $e, $auth_required_unset );
+				if ( $auth_required[ $key ] ) {
+					unset( $ghu_unset_keys[ $e ] );
+				}
+			} );
 
 		if ( ! empty( $ghu_unset_keys ) ) {
 			foreach ( $ghu_unset_keys as $key => $value ) {
@@ -652,7 +673,7 @@ class Settings extends Base {
 	 */
 	public function token_callback_text( $args ) {
 		$name = isset( parent::$options[ $args['id'] ] ) ? esc_attr( parent::$options[ $args['id'] ] ) : '';
-		$type = stristr( $args['id'], 'password' ) ? 'password' : 'text';
+		$type = ( isset( $args['token'] ) ) ? 'password' : 'text';
 		?>
 		<label for="<?php esc_attr( $args['id'] ); ?>">
 			<input type="<?php esc_attr_e( $type ); ?>" style="width:50%;" name="github_updater[<?php esc_attr_e( $args['id'] ); ?>]" value="<?php esc_attr_e( $name ); ?>">

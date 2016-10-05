@@ -115,6 +115,7 @@ class Theme extends Base {
 			$repo_uri            = null;
 			$repo_enterprise_uri = null;
 			$repo_enterprise_api = null;
+			$repo_languages      = null;
 
 			foreach ( (array) self::$extra_headers as $value ) {
 
@@ -133,7 +134,8 @@ class Theme extends Base {
 				}
 
 				if ( empty( $repo_uri ) ||
-				     false === stristr( $value, 'Theme' )
+				     ( false === stristr( $value, 'Theme' ) &&
+				       false === stristr( $value, 'Languages' ) )
 				) {
 					continue;
 				}
@@ -143,6 +145,9 @@ class Theme extends Base {
 
 				if ( $repo_parts['bool'] ) {
 					$header = $this->parse_header_uri( $repo_uri );
+					if ( $theme->stylesheet !== $header['repo'] ) {
+						continue;
+					}
 				}
 
 				$self_hosted_parts = array_diff( array_keys( self::$extra_repo_headers ), array( 'branch' ) );
@@ -150,7 +155,18 @@ class Theme extends Base {
 					$self_hosted = $theme->get( $repo_parts[ $part ] );
 
 					if ( ! empty( $self_hosted ) ) {
-						$repo_enterprise_uri = $self_hosted;
+						switch ( $part ) {
+							case 'languages':
+								$repo_languages = $self_hosted;
+								break;
+							case 'enterprise':
+							case 'gitlab_ce':
+								$repo_enterprise_uri = $self_hosted;
+								break;
+							case 'ci_job':
+								$repo_ci_job = $self_hosted;
+								break;
+						}
 					}
 				}
 
@@ -185,6 +201,9 @@ class Theme extends Base {
 				$git_theme['local_path_extended']     = null;
 				$git_theme['branch']                  = $theme->get( $repo_parts['branch'] );
 				$git_theme['branch']                  = ! empty( $git_theme['branch'] ) ? $git_theme['branch'] : 'master';
+				$git_theme['languages']               = ! empty( $repo_languages ) ? $repo_languages : null;
+				$git_theme['ci_job']                  = ! empty( $repo_ci_job ) ? $repo_ci_job : null;
+				$git_theme['release_asset']           = true == $theme->get( 'Release Asset' ) ? true : false;
 
 				break;
 			}
@@ -242,7 +261,9 @@ class Theme extends Base {
 				add_action( 'after_theme_row', array( &$this, 'remove_after_theme_row' ), 10, 2 );
 				if ( ! $this->tag ) {
 					add_action( "after_theme_row_$theme->repo", array( &$this, 'wp_theme_update_row' ), 10, 2 );
-					add_action( "after_theme_row_$theme->repo", array( &$this, 'multisite_branch_switcher' ), 15, 2 );
+					if ( ! $theme->release_asset ) {
+						add_action( "after_theme_row_$theme->repo", array( &$this, 'multisite_branch_switcher' ), 15, 2 );
+					}
 				}
 			}
 		}
@@ -459,7 +480,7 @@ class Theme extends Base {
 		echo $enclosure['open'];
 		printf( esc_html__( 'Current branch is `%1$s`, try %2$sanother branch%3$s.', 'github-updater' ),
 			$branch,
-			'<a href="#" onclick="jQuery(\'#' . $id . '\').toggle();return false;">',
+			'<a href="javascript:jQuery(\'#' . $id . '\').toggle()">',
 			'</a>'
 		);
 
@@ -540,7 +561,9 @@ class Theme extends Base {
 			} else {
 				$prepared_themes[ $theme->repo ]['description'] .= $this->append_theme_actions_content( $theme );
 			}
-			$prepared_themes[ $theme->repo ]['description'] .= $this->single_install_switcher( $theme );
+			if ( ! $theme->release_asset ) {
+				$prepared_themes[ $theme->repo ]['description'] .= $this->single_install_switcher( $theme );
+			}
 		}
 
 		return $prepared_themes;
@@ -630,7 +653,7 @@ class Theme extends Base {
 		ob_start();
 		printf( '<p>' . esc_html__( 'Current branch is `%s`. Try %sanother version%s', 'github-updater' ),
 			$theme->branch,
-			'<a href="#" onclick="jQuery(\'#ghu_versions\').toggle();return false;">',
+			'<a href="javascript:jQuery(\'#ghu_versions\').toggle()">',
 			'</a></p>'
 		);
 		?>

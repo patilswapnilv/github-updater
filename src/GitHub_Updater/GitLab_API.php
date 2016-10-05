@@ -340,6 +340,15 @@ class GitLab_API extends API {
 		$endpoint           = '';
 
 		/*
+		 * If release asset.
+		 */
+		if ( $this->type->release_asset && '0.0.0' !== $this->type->newest_tag ) {
+			$download_link_base = $this->make_release_asset_download_link();
+
+			return $this->add_access_token_endpoint( $this, $download_link_base );
+		}
+
+		/*
 		 * Check for rollback.
 		 */
 		if ( ! empty( $_GET['rollback'] ) &&
@@ -369,6 +378,65 @@ class GitLab_API extends API {
 			$endpoint = add_query_arg( 'ref', $branch_switch, $endpoint );
 		}
 
+		$endpoint = $this->add_access_token_endpoint( $this, $endpoint );
+
+		return $download_link_base . $endpoint;
+	}
+
+	/**
+	 * Get/process Language Packs.
+	 * Language Packs cannot reside on GitLab CE/Enterprise.
+	 *
+	 * @TODO GitLab CE/Enterprise.
+	 *
+	 * @param array $headers Array of headers of Language Pack.
+	 *
+	 * @return bool When invalid response.
+	 */
+	public function get_language_pack( $headers ) {
+		$response = ! empty( $this->response['languages'] ) ? $this->response['languages'] : false;
+		$type     = explode( '_', $this->type->type );
+
+		if ( ! $response ) {
+			self::$method = 'translation';
+			$id           = urlencode( $headers['owner'] . '/' . $headers['repo'] );
+			$response     = $this->api( '/projects/' . $id . '/repository/files?file_path=language-pack.json' );
+
+			if ( $this->validate_response( $response ) ) {
+				return false;
+			}
+
+			if ( $response ) {
+				$contents = base64_decode( $response->content );
+				$response = json_decode( $contents );
+
+				foreach ( $response as $locale ) {
+					$package = array( 'https://gitlab.com', $headers['owner'], $headers['repo'], 'raw/master' );
+					$package = implode( '/', $package ) . $locale->package;
+
+					$response->{$locale->language}->package = $package;
+					$response->{$locale->language}->type    = $type[1];
+					$response->{$locale->language}->version = $this->type->remote_version;
+				}
+
+				$this->set_transient( 'languages', $response );
+			}
+		}
+		$this->type->language_packs = $response;
+	}
+
+	/**
+	 * Add appropriate access token to endpoint.
+	 *
+	 * @param $git
+	 * @param $endpoint
+	 *
+	 * @access private
+	 *
+	 * @return string
+	 */
+	private function add_access_token_endpoint( $git, $endpoint ) {
+
 		if ( ! empty( parent::$options['gitlab_private_token'] ) ) {
 			$endpoint = add_query_arg( 'private_token', parent::$options['gitlab_private_token'], $endpoint );
 		}
@@ -376,14 +444,14 @@ class GitLab_API extends API {
 		/*
 		 * If using GitLab CE/Enterprise header return this endpoint.
 		 */
-		if ( ! empty( $this->type->enterprise ) ) {
+		if ( ! empty( $git->type->enterprise ) ) {
 			$endpoint = remove_query_arg( 'private_token', $endpoint );
 			if ( ! empty( parent::$options['gitlab_enterprise_token'] ) ) {
 				$endpoint = add_query_arg( 'private_token', parent::$options['gitlab_enterprise_token'], $endpoint );
 			}
 		}
 
-		return $download_link_base . $endpoint;
+		return $endpoint;
 	}
 
 	/**
@@ -395,7 +463,6 @@ class GitLab_API extends API {
 		//$this->type->rating       = $this->make_rating( $this->type->repo_meta );
 		$this->type->last_updated = $this->type->repo_meta->last_activity_at;
 		//$this->type->num_ratings  = $this->type->repo_meta->watchers;
-		$this->type->private = ! $this->type->repo_meta->public;
 	}
 
 	/**
@@ -420,6 +487,9 @@ class GitLab_API extends API {
 			case 'changes':
 			case 'readme':
 				$endpoint = add_query_arg( 'ref', $git->type->branch, $endpoint );
+				break;
+			case 'translation':
+				$endpoint = add_query_arg( 'ref', 'master', $endpoint );
 				break;
 			default:
 				break;
