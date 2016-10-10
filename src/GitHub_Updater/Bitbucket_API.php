@@ -517,29 +517,4 @@ class Bitbucket_API extends API {
 		return $args;
 	}
 
-	/**
-	 * Add Basic Authentication $args to http_request_args filter hook
-	 * for private Bitbucket repositories only during AJAX.
-	 *
-	 * @param $args
-	 * @param $url
-	 *
-	 * @return mixed
-	 */
-	public static function ajax_maybe_authenticate_http( $args, $url ) {
-		if ( parent::is_doing_ajax() && ! parent::is_heartbeat() &&
-		     ( isset( $_POST['slug'] ) && array_key_exists( $_POST['slug'], parent::$options ) &&
-		       1 == parent::$options[ $_POST['slug'] ] &&
-		       false !== stristr( $url, $_POST['slug'] ) )
-		) {
-			$username                         = parent::$options['bitbucket_username'];
-			$password                         = parent::$options['bitbucket_password'];
-			$args['headers']['Authorization'] = 'Basic ' . base64_encode( "$username:$password" );
-
-			return $args;
-		}
-
-		return $args;
-	}
-
 }

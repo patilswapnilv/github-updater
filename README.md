@@ -7,7 +7,7 @@
 * Tags: plugin, theme, update, updater, github, bitbucket, gitlab, remote install
 * Requires at least: 4.0
 * Requires PHP: 5.3
-* Tested up to: 4.6
+* Tested up to: 4.7
 * Stable tag: master
 * Donate link: http://thefragens.com/github-updater-donate
 * License: GPLv2 or later
@@ -112,18 +112,18 @@ There must be a `GitHub Plugin URI`, `Bitbucket Plugin URI`, or `GitLab Plugin U
 
 There must be a `GitHub Theme URI`, `Bitbucket Theme URI`, or `GitLab Theme URI` declaration in the `style.css` file. When initially adding a theme, the directory **must** be identical to the repo name.
 
-~~~css
-/*
-Theme Name:       Test
-Theme URI:        http://thefragens.net/
-Version:          0.1.0
-Description:      Child theme of TwentyTwelve.
-Author:           Andy Fragen
-Template:         twentytwelve
-Template Version: 1.0.0
-GitHub Theme URI: https://github.com/afragen/test-child
-GitHub Branch:    master
-*/
+~~~php
+/**
+ * Theme Name:       Test
+ * Theme URI:        http://thefragens.net/
+ * Version:          0.1.0
+ * Description:      Child theme of TwentyTwelve.
+ * Author:           Andy Fragen
+ * Template:         twentytwelve
+ * Template Version: 1.0.0
+ * GitHub Theme URI: https://github.com/afragen/test-child
+ * GitHub Branch:    master
+ */
 ~~~
 
 ### Language Packs
@@ -218,19 +218,22 @@ You must set a GitLab private token. Go to your GitLab profile page under Edit A
 
 ## Private Repositories
 
-Only private repositories will show up in the Settings page.
+Only private repositories that require some sort of additional authentication or acknowledgment will show up in the Settings page.
 
-![Settings Tab](./assets/screenshot-1.png)
 
 ### GitHub Private Repositories
 
-In order to specify a private repository you will need to obtain a [personal access token](https://github.com/settings/tokens/new). Once you have this, simply add the token to the appropriate plugin or theme in the Settings tab.
+![GitHub Settings Tab](./assets/screenshot-1.png)
 
-Leave this empty if the plugin or theme is in a public repository.
+In order to specify a private repository you will need to obtain a [personal access token](https://github.com/settings/tokens/new). Once you have this, simply add the token in the GitHub Settings tab. If a plugin or theme will not work with your personal access token; add the appropriate access token in the Install tab.
+
+Leave this empty if the plugin or theme is in a public repository. If your personal access token allows `read` access to a private repository, that repository will not display as needing an access token.
 
 ### Bitbucket Private Repositories
 
-Add your personal Bitbucket username and password in the Settings tab. In order to authenticate with the Bitbucket API you will need to have at least `read` privileges for the Bitbucket private repository.
+![Bitbucket Settings Tab](./assets/screenshot-4.png)
+
+Add your personal Bitbucket username and password in the Bitbucket Settings tab or in the Install tab. In order to authenticate with the Bitbucket API you will need to have at least `read` privileges for the Bitbucket private repository.
 
 In order to specify a private repository you will need to check the box next to the repository name in the Settings tab.
 

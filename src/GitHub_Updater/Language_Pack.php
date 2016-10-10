@@ -112,4 +112,8 @@ class Language_Pack extends Base {
 
 		return $transient;
 	}
+<<<<<<< HEAD
+=======
+
+>>>>>>> develop
 }
