@@ -62,10 +62,36 @@ abstract class API extends Base {
 	public static function http_request_args( $args, $url ) {
 		$args['sslverify'] = true;
 		if ( false === stristr( $args['user-agent'], 'GitHub Updater' ) ) {
-			$args['user-agent'] = $args['user-agent'] . '; GitHub Updater - https://github.com/afragen/github-updater';
+			$args['user-agent']    = $args['user-agent'] . '; GitHub Updater - https://github.com/afragen/github-updater';
+			$args['wp-rest-cache'] = array( 'tag' => 'github-updater' );
 		}
 
 		return $args;
+	}
+
+	/**
+	 * Shiny updates results in the update transient being reset with only the wp.org data.
+	 * This catches the response and reloads the transients.
+	 *
+	 * @param mixed  $response HTTP server response.
+	 * @param array  $args     HTTP response arguments.
+	 * @param string $url      URL of HTTP response.
+	 *
+	 * @return mixed $response Just a pass through, no manipulation.
+	 */
+	public static function wp_update_response( $response, $args, $url ) {
+		$parsed_url = parse_url( $url );
+
+		if ( 'api.wordpress.org' === $parsed_url['host'] ) {
+			if ( isset( $args['body']['plugins'] ) && current_user_can( 'update_plugins' ) ) {
+				Plugin::instance()->forced_meta_update_plugins();
+			}
+			if ( isset( $args['body']['themes'] ) && current_user_can( 'update_themes' ) ) {
+				Theme::instance()->forced_meta_update_themes();
+			}
+		}
+
+		return $response;
 	}
 
 	/**
@@ -110,6 +136,9 @@ abstract class API extends Base {
 	 * @return boolean|object
 	 */
 	protected function api( $url ) {
+
+		add_filter( 'http_request_args', array( &$this, 'http_request_args' ), 10, 2 );
+
 		$type          = $this->return_repo_type();
 		$response      = wp_remote_get( $this->get_api_url( $url ) );
 		$code          = (integer) wp_remote_retrieve_response_code( $response );
@@ -206,13 +235,20 @@ abstract class API extends Base {
 	/**
 	 * Returns site_transient and checks/stores transient id in array.
 	 *
-	 * @return array
+	 * @return array|bool
 	 */
 	protected function get_transient() {
 		$repo      = isset( $this->type->repo ) ? $this->type->repo : 'ghu';
 		$transient = 'ghu-' . md5( $repo );
-		if ( ! in_array( $transient, self::$transients, true ) ) {
-			self::$transients[] = $transient;
+
+		/**
+		 * Filter to allow advanced caching plugins to control retrieval of transients.
+		 *
+		 * @since 6.0.0
+		 * @return bool
+		 */
+		if ( false === apply_filters( 'ghu_use_remote_call_transients', true ) ) {
+			return false;
 		}
 
 		return get_site_transient( $transient );
@@ -221,8 +257,8 @@ abstract class API extends Base {
 	/**
 	 * Used to set_site_transient and checks/stores transient id in array.
 	 *
-	 * @param $id
-	 * @param $response
+	 * @param string $id       Transient ID.
+	 * @param mixed  $response Data to be stored.
 	 *
 	 * @return bool
 	 */
@@ -230,8 +266,19 @@ abstract class API extends Base {
 		$repo                  = isset( $this->type ) ? $this->type->repo : 'ghu';
 		$transient             = 'ghu-' . md5( $repo );
 		$this->response[ $id ] = $response;
-		if ( ! in_array( $transient, self::$transients, true ) ) {
-			self::$transients[] = $transient;
+
+		/**
+		 * Filter to allow advanced caching plugins to control transient saving.
+		 *
+		 * @since 6.0.0
+		 *
+		 * @param string $id       Transient ID.
+		 * @param mixed  $response Data to be stored.
+		 *
+		 * @return bool
+		 */
+		if ( false === apply_filters( 'ghu_use_remote_call_transients', true, $id, $response ) ) {
+			return false;
 		}
 		set_site_transient( $transient, $this->response, ( self::$hours * HOUR_IN_SECONDS ) );
 

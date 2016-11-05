@@ -1,4 +1,6 @@
 #### [unreleased]
+
+#### 6.0.0 / 2016-10-26
 * added `class Language_Pack` and new repo, [Language Pack Maker](https://github.com/afragen/github-updater-language-pack-maker), to create and update from a separate Language Pack repository.
 * added new header for Language Pack updates. Language Pack updates can and will now be decoupled from the plugin release.
 * obfuscated token/password values in Settings page, for @scarstens
@@ -7,6 +9,17 @@
 * refactored to provide Settings page with dynamically displayed sub-tabs
 * added display of installed plugins/themes using GitHub Updater in Settings sub-tabs
 * added ability to enter Bitbucket credentials to Install tabs if not already present
+* moved action/filter hook calls out of constructors, make @carlalexander happy
+* refactored to incorporate GitLab personal access tokens, users will need to reset tokens.
+* added a filter hook `'github_updater_run_at_scale'` to skip several API calls making GitHub Updater at scale more performant, see README for usage details
+* added several hooks for  [WP REST Cache](https://github.com/afragen/wordpress-rest-cache) and @scarstens
+* skip API calls for branches and tags if branch switching not enabled
+* refactored `delete_all_transients()` to delete from database, only called in `class Base`
+* refactored _branch switching_ to be consistent among plugins and themes. This means plugins now can rollback to one of the previous 3 tagged releases.
+* fixed `get_repo_slugs()` for initially misnamed repository, ie `github-updater-develop`
+* renamed `Refresh Transients` to `Refresh Cache`, hopefully to provide more clarity
+* refactored to only load GHU site options and other database queries for privileges users on backend only
+* added query arg of `?per_page=100` to GitLab query for project IDs, this is max number able to be retrieved, yes an edge case [#465](https://github.com/afragen/github-updater/issues/465)
 
 #### 5.6.2 / 2016-09-24
 * added reset of _update\_plugins_ and _update\_themes_ transient with _Refresh Transients_

@@ -89,3 +89,14 @@ The second hook will simply make the Settings page unavailable.
 
 `add_filter( 'github_updater_hide_settings', '__return_true' );`
 
+There is a hook to bypass the `wp_remote_get` calls for repo meta, readme.txt, and changelogs. These data provide for a richer experience in _View details_. If you are running GitHub Updater at scale you will certainly get more performance by omitting these API calls. Add the following hook to enable.
+
+`add_filter( 'github_updater_run_at_scale', '__return_true' );`
+
+There is a hook to enter into the _Refresh Transients_ path. I would be used in the following manner.
+
+`add_action( 'ghu_refresh_transients', 'my_function_when_transients_are_deleted' );`
+
+## Slack
+
+We now have a [Slack team for GitHub Updater](https://github-updater.slack.com). Please ping me for an invite.

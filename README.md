@@ -30,7 +30,11 @@ or
 `GitHub Theme URI: afragen/test-child`  
 `GitHub Theme URI: https://github.com/afragen/test-child`
 
-...where the above URI leads to the __owner/repository__ of your theme or plugin. The URI may be in the format `https://github.com/<owner>/<repo>` or the short format `<owner>/<repo>`. You do not need both. Only one Plugin or Theme URI is required. You **must not** include any extensions like `.git`.
+...where the above URI leads to the __owner/repository__ of your theme or plugin. The URI may be in the format `https://github.com/<owner>/<repo>` or the short format `<owner>/<repo>`. You do not need both. Only one Plugin or Theme URI is required. You **should not** include any extensions like `.git`.
+
+## Slack
+
+We now have a [Slack team for GitHub Updater](https://github-updater.slack.com). Please ping me for an invite.
 
 ## Installation
 
@@ -214,7 +218,10 @@ Instead of the `GitHub Theme URI` header you will need to use the `GitLab Theme 
 
 The `GitLab Branch` header is supported for both plugins and themes.
 
-You must set a GitLab private token. Go to your GitLab profile page under Edit Account. From here you can retrieve or reset your GitLab private token.
+You must set a GitLab private token or a GitLab personal access token. 
+
+* Go to your GitLab Settings page under the Account tab. From here you can retrieve or reset your GitLab private token.
+* Go to your GitLab Profile Settings page under the Access Tokens tab. From here you can create a personal access token.
 
 ## Private Repositories
 
@@ -263,6 +270,8 @@ Example, `$repo-$tag.zip` where `$repo` is the repository slug and `$tag` is the
 
 There is support for [GitLab Build Artifacts](https://gitlab.com/help/user/project/builds/artifacts.md) which may be used as a release asset. You must also add the header, `GitLab CI Job:`, with the build job name.
 
+Release assets do not work for private GitHub repositories at this time. [#475](https://github.com/afragen/github-updater/issues/475)
+
 **You must tag your releases to use this feature.**
 
 ## Hosting Plugin in WP.org Repository
@@ -277,9 +286,9 @@ From the `GitHub Updater Settings Page` there is a tabbed interface for remote i
 
 ![Remote Install of Plugin Tab](./assets/screenshot-2.png)
 
-## Refreshing Transients
+## Refreshing Cache
 
-Use the **Refresh Transients** button in the `GitHub Updater Settings Page` screen and all the transients will be deleted and the API will be queried again. This may cause timeout issues against the API, especially the GitHub API which only allows 60 unauthenticated calls per hour. Please set a Personal GitHub Access Token to avoid these timeouts.
+Use the **Refresh Cache** button in the `GitHub Updater Settings Page` screen and all the transients will be deleted and the API will be queried again. This may cause timeout issues against the API, especially the GitHub API which only allows 60 unauthenticated calls per hour. Please set a Personal GitHub Access Token to avoid these timeouts.
 
 Be careful about refreshing the browser window after this as you may be continually deleting the transients and hitting the API. 
 
@@ -380,7 +389,7 @@ To set Extended Naming add `define( 'GITHUB_UPDATER_EXTENDED_NAMING', true );` i
 
 There are 2 added filter hooks specifically for developers wanting to distribute private themes/plugins to clients without the client having to interact with the Settings page.
 
-The first allows the developer to set the GitHub Access Token for a specific plugin or theme. The anonymous function must return a **single** key/value pair where the key is the plugin/theme repo slug and the value is the token.
+The first allows the developer to set the GitHub Access Token for a specific plugin or theme. The anonymous function must return key/value pairs where the key is the plugin/theme repo slug and the value is the token. You could also set the GitHub Access Token in a similar fashion where the key is `'github_access_token'`.
 
 ~~~php
 add_filter( 'github_updater_token_distribution',
@@ -393,6 +402,18 @@ The second hook will simply make the Settings page unavailable.
 
 ~~~php
 add_filter( 'github_updater_hide_settings', '__return_true' );
+~~~
+
+There is a hook to bypass the `wp_remote_get` calls for repo meta, readme.txt, and changelogs. These data provide for a richer experience in _View details_. If you are running GitHub Updater at scale you will certain get more performance by omitting these API calls. Add the following hook to enable.
+
+~~~php
+add_filter( 'github_updater_run_at_scale', '__return_true' );
+~~~
+
+There is a hook to enter into the _Refresh Transients_ path. I would be used in the following manner.
+
+~~~php
+add_action( 'ghu_refresh_transients', 'my_function_when_transients_are_deleted' );
 ~~~
 
 ## Extras
@@ -438,6 +459,8 @@ When first downloading and installing a plugin from GitHub you might have to do 
 
 W3 Total Cache object cache also clears the transient cache. Unfortunately this hampers GitHub Updater's storage of API data using the Transient API. The solution is to turn off the object cache.
 
+If a plugin loads earlier than GitHub Updater and calls `wp_get_theme()` that will prevent the current theme from seeing updates if it uses this plugin. The only solution to this is adding a call to `wp_cache_flush()` after that call. The only location inside of GHU that works is in `Base::__construct` but this will cause anyone using Redis to flush the cache with almost every page load.
+
 ## ChangeLog
 
 See [CHANGES.md](CHANGES.md). In your project create a `CHANGES.md` or `CHANGELOG.md` file.
@@ -460,4 +483,4 @@ GitHub Updater logo by [LogoMajestic](http://www.logomajestic.com).
 
 Pull requests are welcome. Please fork and submit pull requests against the `develop` branch.
 
-Loving crafted with [PhpStorm](https://www.jetbrains.com/phpstorm/)
+Lovingly crafted with [PhpStorm](https://www.jetbrains.com/phpstorm/)
