@@ -262,7 +262,7 @@ class Bitbucket_Server_API extends API {
 
 		if ( $response && isset( $response->data ) ) {
 			$parser   = new Readme_Parser;
-			$response = $parser->parse_readme( $response->data );
+			$response = $parser->parse_data( $response->data );
 			$this->set_transient( 'readme', $response );
 		}
 
@@ -329,7 +329,7 @@ class Bitbucket_Server_API extends API {
 		}
 
 		$this->type->repo_meta = $response;
-		$this->_add_meta_repo_object();
+		$this->add_meta_repo_object();
 
 		return true;
 	}
@@ -419,20 +419,41 @@ class Bitbucket_Server_API extends API {
 	}
 
 	/**
-	 * Add remote data to type object.
+	 * Get/process Language Packs.
 	 *
-	 * @access private
+	 * @TODO Bitbucket Enterprise
+	 *
+	 * @param array $headers Array of headers of Language Pack.
+	 *
+	 * @return bool When invalid response.
 	 */
-	private function _add_meta_repo_object() {
-		// $this->type->rating       = $this->make_rating( $this->type->repo_meta );
-		// $this->type->last_updated = $this->type->repo_meta->updated_on;
-		// $this->type->num_ratings  = $this->type->watchers;
+	public function get_language_pack( $headers ) {
+		$response = ! empty( $this->response['languages'] ) ? $this->response['languages'] : false;
+		$type     = explode( '_', $this->type->type );
 
-		/*
-		 * Use the inverse. E.g. if public is true, return false so private is false
-		 * and thus publicly accessible.
-		 */
-		$this->type->private = ! $this->type->repo_meta->project->public;
+		if ( ! $response ) {
+			$response = $this->api( '/1.0/repositories/' . $headers['owner'] . '/' . $headers['repo'] . '/src/master/language-pack.json' );
+
+			if ( $this->validate_response( $response ) ) {
+				return false;
+			}
+
+			if ( $response ) {
+				$response = json_decode( $response->data );
+
+				foreach ( $response as $locale ) {
+					$package = array( 'https://bitbucket.org', $headers['owner'], $headers['repo'], 'raw/master' );
+					$package = implode( '/', $package ) . $locale->package;
+
+					$response->{$locale->language}->package = $package;
+					$response->{$locale->language}->type    = $type[1];
+					$response->{$locale->language}->version = $this->type->remote_version;
+				}
+
+				$this->set_transient( 'languages', $response );
+			}
+		}
+		$this->type->language_packs = $response;
 	}
 
 	/**
@@ -507,11 +528,106 @@ class Bitbucket_Server_API extends API {
 	}
 
 	/**
+	 * Add Basic Authentication $args to http_request_args filter hook
+	 * for private Bitbucket repositories only during AJAX.
+	 *
+	 * @param $args
+	 * @param $url
+	 *
+	 * @return mixed
+	 */
+	public function ajax_maybe_authenticate_http( $args, $url ) {
+		global $wp_current_filter;
+
+		$ajax_update    = array( 'wp_ajax_update-plugin', 'wp_ajax_update-theme' );
+		$is_ajax_update = array_intersect( $ajax_update, $wp_current_filter );
+
+		if ( ! empty( $is_ajax_update ) ) {
+			$this->load_options();
+		}
+
+		if ( parent::is_doing_ajax() && ! parent::is_heartbeat() &&
+		     ( isset( $_POST['slug'] ) && array_key_exists( $_POST['slug'], self::$options ) &&
+		       1 == self::$options[ $_POST['slug'] ] &&
+		       false !== stristr( $url, $_POST['slug'] ) )
+		) {
+			$username                         = self::$options['bitbucket_enterprise_username'];
+			$password                         = self::$options['bitbucket_enterprise_password'];
+			$args['headers']['Authorization'] = 'Basic ' . base64_encode( "$username:$password" );
+
+			return $args;
+		}
+
+		return $args;
+	}
+
+	/**
 	 * Added due to abstract class designation, not used for Bitbucket.
 	 *
 	 * @param $git
 	 * @param $endpoint
 	 */
-	protected function add_endpoints( $git, $endpoint ) {}
+	protected function add_endpoints( $git, $endpoint ) {
+	}
+
+	/**
+	 * Parse API response call and return only array of tag numbers.
+	 *
+	 * @param object $response Response from API call.
+	 *
+	 * @return array|object Array of tag numbers, object is error.
+	 */
+	protected function parse_tag_response( $response ) {
+		if ( isset( $response->message ) ) {
+			return $response;
+		}
+
+		return array_keys( (array) $response );
+	}
+
+	/**
+	 * Parse API response and return array of meta variables.
+	 *
+	 * @param object $response Response from API call.
+	 *
+	 * @return array $arr Array of meta variables.
+	 */
+	protected function parse_meta_response( $response ) {
+		$arr      = array();
+		$response = array( $response );
+
+		array_filter( $response, function( $e ) use ( &$arr ) {
+			$arr['private']      = $e->is_private;
+			$arr['last_updated'] = $e->updated_on;
+			$arr['watchers']     = 0;
+			$arr['forks']        = 0;
+			$arr['open_issues']  = 0;
+			$arr['score']        = 0;
+		} );
+
+		return $arr;
+	}
+
+	/**
+	 * Parse API response and return array with changelog in base64.
+	 *
+	 * @param object $response Response from API call.
+	 *
+	 * @return array|object $arr Array of changes in base64, object if error.
+	 */
+	protected function parse_changelog_response( $response ) {
+		if ( isset( $response->message ) ) {
+			return $response;
+		}
+
+		$arr      = array();
+		$response = array( $response );
+
+		array_filter( $response, function( $e ) use ( &$arr ) {
+			$arr['changes'] = $e->data;
+		} );
+
+		return $arr;
+	}
 
 }
