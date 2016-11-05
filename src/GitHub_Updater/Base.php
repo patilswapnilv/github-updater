@@ -137,7 +137,7 @@ class Base {
 	 * Loads options to private static variable.
 	 */
 	public function __construct() {
-		if ( isset( $_GET['refresh_transients'] ) ) {
+		if ( isset( $_POST['ghu_refresh_cache'] ) ) {
 			$this->delete_all_transients();
 		}
 
@@ -163,6 +163,10 @@ class Base {
 		add_action( 'wp_ajax_github-updater-update', array( &$this, 'ajax_update' ) );
 		add_action( 'wp_ajax_nopriv_github-updater-update', array( &$this, 'ajax_update' ) );
 
+		// Load hook for shiny updates Bitbucket authentication headers.
+		$bitbucket = new Bitbucket_API( new \stdClass() );
+		add_filter( 'http_request_args', array( &$bitbucket, 'ajax_maybe_authenticate_http' ), 15, 2 );
+
 		add_filter( 'extra_theme_headers', array( &$this, 'add_headers' ) );
 		add_filter( 'extra_plugin_headers', array( &$this, 'add_headers' ) );
 		add_filter( 'upgrader_source_selection', array( &$this, 'upgrader_source_selection' ), 10, 4 );
@@ -181,6 +185,7 @@ class Base {
 		remove_filter( 'extra_theme_headers', array( &$this, 'add_headers' ) );
 		remove_filter( 'extra_plugin_headers', array( &$this, 'add_headers' ) );
 		remove_filter( 'http_request_args', array( 'Fragen\\GitHub_Updater\\API', 'http_request_args' ) );
+		remove_filter( 'http_response', array( 'Fragen\\GitHub_Updater\\API', 'wp_update_response' ) );
 
 		if ( $this->repo_api instanceof Bitbucket_API ) {
 			$this->repo_api->remove_hooks();
@@ -232,7 +237,7 @@ class Base {
 			$force_meta_update = true;
 		}
 
-		if ( isset( $_GET['refresh_transients'] ) ) {
+		if ( isset( $_POST['ghu_refresh_cache'] ) ) {
 			/**
 			 * Fires later in cycle when Refreshing Cache.
 			 *
@@ -277,9 +282,11 @@ class Base {
 
 	/**
 	 * Performs actual plugin metadata fetching.
+	 *
+	 * @param bool $true Only used from API::wp_update_response()
 	 */
-	public function forced_meta_update_plugins() {
-		if ( self::$load_repo_meta ) {
+	public function forced_meta_update_plugins( $true = false ) {
+		if ( self::$load_repo_meta || $true ) {
 			$this->load_options();
 			Plugin::instance()->get_remote_plugin_meta();
 		}
@@ -287,9 +294,11 @@ class Base {
 
 	/**
 	 * Performs actual theme metadata fetching.
+	 *
+	 * @param bool $true Only used from API::wp_update_response()
 	 */
-	public function forced_meta_update_themes() {
-		if ( self::$load_repo_meta ) {
+	public function forced_meta_update_themes( $true = false ) {
+		if ( self::$load_repo_meta || $true ) {
 			$this->load_options();
 			Theme::instance()->get_remote_theme_meta();
 		}
@@ -925,40 +934,40 @@ class Base {
 			switch ( $repo_type['repo'] ) {
 				case 'github':
 					foreach ( (array) $response as $tag ) {
-						$download_base          = implode( '/', array(
+						$download_base    = implode( '/', array(
 							$repo_type['base_uri'],
 							'repos',
 							$this->type->owner,
 							$this->type->repo,
 							'zipball/',
 						) );
-						$tags[]                 = $tag->name;
-						$rollback[ $tag->name ] = $download_base . $tag->name;
+						$tags[]           = $tag;
+						$rollback[ $tag ] = $download_base . $tag;
 					}
 					break;
 				case 'bitbucket':
-					foreach ( (array) $response as $num => $tag ) {
+					foreach ( (array) $response as $tag ) {
 						$download_base    = implode( '/', array(
 							$repo_type['base_download'],
 							$this->type->owner,
 							$this->type->repo,
 							'get/',
 						) );
-						$tags[]           = $num;
-						$rollback[ $num ] = $download_base . $num . '.zip';
+						$tags[]           = $tag;
+						$rollback[ $tag ] = $download_base . $tag . '.zip';
 					}
 					break;
 				case 'gitlab':
 					foreach ( (array) $response as $tag ) {
-						$download_link          = implode( '/', array(
+						$download_link    = implode( '/', array(
 							$repo_type['base_download'],
 							$this->type->owner,
 							$this->type->repo,
 							'repository/archive.zip',
 						) );
-						$download_link          = add_query_arg( 'ref', $tag, $download_link );
-						$tags[]                 = $tag->name;
-						$rollback[ $tag->name ] = $download_link;
+						$download_link    = add_query_arg( 'ref', $tag, $download_link );
+						$tags[]           = $tag;
+						$rollback[ $tag ] = $download_link;
 					}
 					break;
 			}
@@ -1023,6 +1032,18 @@ class Base {
 	}
 
 	/**
+	 * Add remote data to type object.
+	 *
+	 * @access protected
+	 */
+	protected function add_meta_repo_object() {
+		$this->type->rating       = $this->make_rating( $this->type->repo_meta );
+		$this->type->last_updated = $this->type->repo_meta['last_updated'];
+		$this->type->num_ratings  = $this->type->repo_meta['watchers'];
+		$this->type->is_private   = $this->type->repo_meta['private'];
+	}
+
+	/**
 	 * Create some sort of rating from 0 to 100 for use in star ratings.
 	 * I'm really just making this up, more based upon popularity.
 	 *
@@ -1031,10 +1052,10 @@ class Base {
 	 * @return integer
 	 */
 	protected function make_rating( $repo_meta ) {
-		$watchers    = empty( $repo_meta->watchers ) ? $this->type->watchers : $repo_meta->watchers;
-		$forks       = empty( $repo_meta->forks ) ? $this->type->forks : $repo_meta->forks;
-		$open_issues = empty( $repo_meta->open_issues ) ? $this->type->open_issues : $repo_meta->open_issues;
-		$score       = empty( $repo_meta->score ) ? $this->type->score : $repo_meta->score; //what is this anyway?
+		$watchers    = empty( $repo_meta['watchers'] ) ? $this->type->watchers : $repo_meta['watchers'];
+		$forks       = empty( $repo_meta['forks'] ) ? $this->type->forks : $repo_meta['forks'];
+		$open_issues = empty( $repo_meta['open_issues'] ) ? $this->type->open_issues : $repo_meta['open_issues'];
+		$score       = empty( $repo_meta['score'] ) ? $this->type->score : $repo_meta['score']; //what is this anyway?
 
 		$rating = round( $watchers + ( $forks * 1.5 ) - $open_issues + $score );
 

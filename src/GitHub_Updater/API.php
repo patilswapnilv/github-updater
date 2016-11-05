@@ -52,10 +52,17 @@ abstract class API extends Base {
 
 	abstract protected function add_endpoints( $git, $endpoint );
 
+	abstract protected function parse_tag_response( $response );
+
+	abstract protected function parse_meta_response( $response );
+
+	abstract protected function parse_changelog_response( $response );
+
 	/**
 	 * Adds custom user agent for GitHub Updater.
 	 *
-	 * @param  array $args Existing HTTP Request arguments.
+	 * @param array  $args Existing HTTP Request arguments.
+	 * @param string $url  URL being passed.
 	 *
 	 * @return array Amended HTTP Request arguments.
 	 */
@@ -84,10 +91,16 @@ abstract class API extends Base {
 
 		if ( 'api.wordpress.org' === $parsed_url['host'] ) {
 			if ( isset( $args['body']['plugins'] ) && current_user_can( 'update_plugins' ) ) {
-				Plugin::instance()->forced_meta_update_plugins();
+				$current = get_site_transient( 'update_plugins' );
+				Plugin::instance()->forced_meta_update_plugins( true );
+				$current = Plugin::instance()->pre_set_site_transient_update_plugins( $current );
+				set_site_transient( 'update_plugins', $current );
 			}
 			if ( isset( $args['body']['themes'] ) && current_user_can( 'update_themes' ) ) {
-				Theme::instance()->forced_meta_update_themes();
+				$current = get_site_transient( 'update_themes' );
+				Theme::instance()->forced_meta_update_themes( true );
+				$current = Theme::instance()->pre_set_site_transient_update_themes( $current );
+				set_site_transient( 'update_themes', $current );
 			}
 		}
 
