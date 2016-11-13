@@ -229,26 +229,8 @@ class Theme extends Base {
 				continue;
 			}
 
-			/*
-			 * Update theme transient with rollback data.
-			 */
-			if ( ! empty( $_GET['rollback'] ) &&
-			     ( isset( $_GET['theme'] ) && $theme->repo === $_GET['theme'] )
-			) {
-				$this->tag         = $_GET['rollback'];
-				$updates_transient = get_site_transient( 'update_themes' );
-				$rollback          = array(
-					'theme'       => $theme->repo,
-					'new_version' => $this->tag,
-					'url'         => $theme->uri,
-					'package'     => $this->repo_api->construct_download_link( $this->tag, false ),
-				);
-				if ( array_key_exists( $this->tag, $theme->branches ) ) {
-					$rollback['new_version'] = '0.0.0';
-				}
-				$updates_transient->response[ $theme->repo ] = $rollback;
-				set_site_transient( 'update_themes', $updates_transient );
-			}
+			// Update theme transient with rollback (branch switching) data.
+			add_filter( 'wp_get_update_data', array( &$this, 'set_rollback' ) );
 
 			/*
 			 * Remove WordPress update row in theme row, only in multisite.

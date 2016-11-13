@@ -141,6 +141,9 @@ class Base {
 			$this->delete_all_transients();
 		}
 
+		// Run GitHub Updater upgrade functions.
+		new GHU_Upgrade();
+
 		$this->load_hooks();
 	}
 
@@ -637,22 +640,7 @@ class Base {
 
 		$wp_filesystem->move( $source, $new_source );
 
-		// Delete transients after update of this plugin.
-		if ( 'github-updater' === $slug ) {
-			add_action( 'upgrader_process_complete', array( &$this, 'delete_transients_ghu_update' ), 15 );
-		}
-
 		return trailingslashit( $new_source );
-	}
-
-	/**
-	 * Delete transients after upgrade for GHU.
-	 *
-	 * Run on `upgrader_process_complete` filter hook so rebuilt transients
-	 * are from updated plugin code.
-	 */
-	public function delete_transients_ghu_update() {
-		$this->delete_all_transients();
 	}
 
 	/**
@@ -1094,7 +1082,7 @@ class Base {
 			return empty( $options['branch_switch'] );
 		}
 
-		return ( ! isset( $_GET['refresh_transients'] ) && ! $response && ! $this->can_update( $this->type ) );
+		return ( ! isset( $_POST['ghu_refresh_cache'] ) && ! $response && ! $this->can_update( $this->type ) );
 	}
 
 	/**
@@ -1108,7 +1096,7 @@ class Base {
 	protected function get_local_info( $repo, $file ) {
 		$response = null;
 
-		if ( isset( $_GET['refresh_transients'] ) ) {
+		if ( isset( $_POST['ghu_refresh_cache'] ) ) {
 			return $response;
 		}
 
@@ -1249,6 +1237,83 @@ class Base {
 			) );
 
 		return $update_url;
+	}
+
+	/**
+	 * Test if rollback and then run `set_rollback_transient`.
+	 *
+	 * @uses filter hook 'wp_get_update_data'
+	 *
+	 * @param mixed $update_data
+	 *
+	 * @return mixed $update_data
+	 */
+	public function set_rollback( $update_data ) {
+		if ( empty( $_GET['rollback'] ) && ! isset( $_GET['action'] ) ) {
+			return $update_data;
+		}
+
+		if ( isset( $_GET['plugin'] ) && 'upgrade-plugin' === $_GET['action'] ) {
+			$slug = dirname( $_GET['plugin'] );
+			$type = 'plugin';
+		}
+
+		if ( isset( $_GET['theme'] ) && 'upgrade-theme' === $_GET['action'] ) {
+			$slug = $_GET['theme'];
+			$type = 'theme';
+		}
+
+		if ( array_key_exists( $slug, $this->config ) ) {
+			$repo = $this->config[ $slug ];
+			$this->set_rollback_transient( $type, $repo );
+		}
+
+		return $update_data;
+	}
+
+	/**
+	 * Update transient for rollback or branch switch.
+	 *
+	 * @param string $type plugin|theme
+	 * @param object $repo
+	 */
+	private function set_rollback_transient( $type, $repo ) {
+		switch ( $repo->type ) {
+			case 'github_plugin':
+			case 'github_theme':
+				$this->repo_api = new GitHub_API( $repo );
+				break;
+			case 'bitbucket_plugin':
+			case 'bitbucket_theme':
+				$this->repo_api = new Bitbucket_API( $repo );
+				break;
+			case 'gitlab_plugin':
+			case 'gitlab_theme':
+				$this->repo_api = new GitLab_API( $repo );
+				break;
+		}
+
+		$transient         = 'update_' . $type . 's';
+		$this->tag         = $_GET['rollback'];
+		$slug              = 'plugin' === $type ? $repo->slug : $repo->repo;
+		$updates_transient = get_site_transient( $transient );
+		$rollback          = array(
+			$type         => $slug,
+			'new_version' => $this->tag,
+			'url'         => $repo->uri,
+			'package'     => $this->repo_api->construct_download_link( false, $this->tag ),
+			'branch'      => $repo->branch,
+			'branches'    => $repo->branches,
+		);
+
+		if ( 'plugin' === $type ) {
+			$rollback['slug']                     = $repo->repo;
+			$updates_transient->response[ $slug ] = (object) $rollback;
+		}
+		if ( 'theme' === $type ) {
+			$updates_transient->response[ $slug ] = (array) $rollback;
+		}
+		set_site_transient( $transient, $updates_transient );
 	}
 
 	/**
