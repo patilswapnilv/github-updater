@@ -415,7 +415,7 @@ class Settings extends Base {
 			);
 		}
 
-		if ( parent::$auth_required['gitlab_private'] ) {
+		if ( parent::$auth_required['gitlab'] ) {
 			add_settings_section(
 				'gitlab_id',
 				esc_html__( 'GitLab Private Settings', 'github-updater' ),
@@ -580,11 +580,6 @@ class Settings extends Base {
 				     ! parent::$auth_required['bitbucket_private']
 				) {
 					parent::$auth_required['bitbucket_private'] = true;
-				}
-				if ( false !== strpos( $token->type, 'gitlab' ) &&
-				     ! parent::$auth_required['gitlab_private']
-				) {
-					parent::$auth_required['gitlab_private'] = true;
 				}
 			}
 
@@ -915,6 +910,7 @@ class Settings extends Base {
 			'gitlab_access_token',
 			'gitlab_enterprise_token',
 			'branch_switch',
+			'db_version',
 		);
 
 		$repos = array_map( function( $e ) {
@@ -927,8 +923,9 @@ class Settings extends Base {
 			}
 		);
 
-		$intersect = array_intersect( $options, $repos );
-		$options   = array_merge( $intersect, $_POST['github_updater'] );
+		$intersect  = array_intersect( $options, $repos );
+		$db_version = array( 'db_version' => parent::$options['db_version'] );
+		$options    = array_merge( $intersect, $_POST['github_updater'], $db_version );
 
 		return $options;
 	}
