@@ -140,6 +140,7 @@ class Bitbucket_Server_API extends API {
 			}
 
 			if ( $response ) {
+				$response = $this->parse_tag_response( $response );
 				$this->set_transient( 'tags', $response );
 			}
 		}
@@ -189,9 +190,11 @@ class Bitbucket_Server_API extends API {
 			if ( ! $response ) {
 				$response          = new \stdClass();
 				$response->message = 'No changelog found';
-			} else {
-				$response       = new \stdClass();
-				$response->data = wp_remote_retrieve_body( $response );
+			}
+
+			if ( $response ) {
+				$response = wp_remote_retrieve_body( $response );
+				$response = $this->parse_changelog_response( $response );
 				$this->set_transient( 'changes', $response );
 			}
 		}
@@ -200,13 +203,8 @@ class Bitbucket_Server_API extends API {
 			return false;
 		}
 
-		$changelog = isset( $this->response['changelog'] ) ? $this->response['changelog'] : false;
-
-		if ( ! $changelog ) {
-			$parser    = new \Parsedown;
-			$changelog = $parser->text( $response->data );
-			$this->set_transient( 'changelog', $changelog );
-		}
+		$parser    = new \Parsedown;
+		$changelog = $parser->text( $response->data );
 
 		$this->type->sections['changelog'] = $changelog;
 
@@ -250,22 +248,19 @@ class Bitbucket_Server_API extends API {
 			if ( ! $response ) {
 				$response          = new \stdClass();
 				$response->message = 'No readme found';
-			} else {
-				$response       = new \stdClass();
-				$response->data = wp_remote_retrieve_body( $response );
+			}
+
+			if ( $response && isset( $response->data ) ) {
+				$file     = $response->data;
+				$parser   = new Readme_Parser( $file );
+				$response = $parser->parse_data();
+				$this->set_transient( 'readme', $response );
 			}
 		}
 
 		if ( $this->validate_response( $response ) ) {
 			return false;
 		}
-
-		if ( $response && isset( $response->data ) ) {
-			$parser   = new Readme_Parser;
-			$response = $parser->parse_data( $response->data );
-			$this->set_transient( 'readme', $response );
-		}
-
 
 		$this->set_readme_info( $response );
 
@@ -320,6 +315,7 @@ class Bitbucket_Server_API extends API {
 			$response = $this->api( '/1.0/projects/:owner/repos/:repo' );
 
 			if ( $response ) {
+				$response = $this->parse_meta_response( $response );
 				$this->set_transient( 'meta', $response );
 			}
 		}
