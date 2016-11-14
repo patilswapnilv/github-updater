@@ -33,7 +33,7 @@ if ( ! defined( 'WPINC' ) ) {
  * @author  Andy Fragen
  * @author  Bjorn Wijers
  */
-class Bitbucket_Server_API extends API {
+class Bitbucket_Server_API extends Bitbucket_API {
 
 	/**
 	 * Constructor.
@@ -504,26 +504,6 @@ class Bitbucket_Server_API extends API {
 	}
 
 	/**
-	 * Removes Basic Authentication header for Bitbucket Release Assets.
-	 * Storage in AmazonS3 buckets, uses Query String Request Authentication Alternative.
-	 *
-	 * @link http://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html#RESTAuthenticationQueryStringAuth
-	 *
-	 * @param $args
-	 * @param $url
-	 *
-	 * @return mixed
-	 */
-	public function http_release_asset_auth( $args, $url ) {
-		$arrURL = parse_url( $url );
-		if ( isset( $arrURL['host'] ) && 'bbuseruploads.s3.amazonaws.com' === $arrURL['host'] ) {
-			unset( $args['headers']['Authorization'] );
-		}
-
-		return $args;
-	}
-
-	/**
 	 * Add Basic Authentication $args to http_request_args filter hook
 	 * for private Bitbucket repositories only during AJAX.
 	 *
@@ -555,75 +535,6 @@ class Bitbucket_Server_API extends API {
 		}
 
 		return $args;
-	}
-
-	/**
-	 * Added due to abstract class designation, not used for Bitbucket.
-	 *
-	 * @param $git
-	 * @param $endpoint
-	 */
-	protected function add_endpoints( $git, $endpoint ) {
-	}
-
-	/**
-	 * Parse API response call and return only array of tag numbers.
-	 *
-	 * @param object $response Response from API call.
-	 *
-	 * @return array|object Array of tag numbers, object is error.
-	 */
-	protected function parse_tag_response( $response ) {
-		if ( isset( $response->message ) ) {
-			return $response;
-		}
-
-		return array_keys( (array) $response );
-	}
-
-	/**
-	 * Parse API response and return array of meta variables.
-	 *
-	 * @param object $response Response from API call.
-	 *
-	 * @return array $arr Array of meta variables.
-	 */
-	protected function parse_meta_response( $response ) {
-		$arr      = array();
-		$response = array( $response );
-
-		array_filter( $response, function( $e ) use ( &$arr ) {
-			$arr['private']      = $e->is_private;
-			$arr['last_updated'] = $e->updated_on;
-			$arr['watchers']     = 0;
-			$arr['forks']        = 0;
-			$arr['open_issues']  = 0;
-			$arr['score']        = 0;
-		} );
-
-		return $arr;
-	}
-
-	/**
-	 * Parse API response and return array with changelog in base64.
-	 *
-	 * @param object $response Response from API call.
-	 *
-	 * @return array|object $arr Array of changes in base64, object if error.
-	 */
-	protected function parse_changelog_response( $response ) {
-		if ( isset( $response->message ) ) {
-			return $response;
-		}
-
-		$arr      = array();
-		$response = array( $response );
-
-		array_filter( $response, function( $e ) use ( &$arr ) {
-			$arr['changes'] = $e->data;
-		} );
-
-		return $arr;
 	}
 
 }
