@@ -220,7 +220,7 @@ class Bitbucket_Server_API extends Bitbucket_API {
 		}
 
 		$parser    = new \Parsedown;
-		$changelog = $parser->text( $response->data );
+		$changelog = $parser->text( $response['changes'] );
 
 		$this->type->sections['changelog'] = $changelog;
 
