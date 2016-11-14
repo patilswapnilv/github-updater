@@ -661,6 +661,8 @@ class Settings extends Base {
 			'github_enterprise_token',
 			'bitbucket_username',
 			'bitbucket_password',
+			'bitbucket_enterprise_username',
+			'bitbucket_enterprise_password',
 		);
 
 		array_filter( $always_unset,
@@ -908,6 +910,8 @@ class Settings extends Base {
 			'github_access_token',
 			'bitbucket_username',
 			'bitbucket_password',
+			'bitbucket_enterprise_username',
+			'bitbucket_enterprise_password',
 			'gitlab_access_token',
 			'gitlab_enterprise_token',
 			'branch_switch',
