@@ -184,6 +184,7 @@ class Plugin extends Base {
 							break;
 						case 'Bitbucket':
 							$repo_enterprise_api = $repo_enterprise_uri . '/rest/api';
+							$repo_parts['type']  = 'bbenterprise_plugin';
 							break;
 					}
 				}
