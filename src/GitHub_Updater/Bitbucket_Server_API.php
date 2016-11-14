@@ -399,7 +399,7 @@ class Bitbucket_Server_API extends Bitbucket_API {
 		 * add a prefix query argument to create a subdirectory with the same name
 		 * as the repo, e.g. 'my-repo' becomes 'my-repo/'
 		 */
-		$endpoint = add_query_arg( 'prefix', $this->type->repo . '/', $endpoint );
+		//$endpoint = add_query_arg( 'prefix', $this->type->repo . '/', $endpoint );
 
 		if ( 'master' != $this->type->branch || empty( $this->type->tags ) ) {
 			$endpoint = add_query_arg( 'at', $this->type->branch, $endpoint );
