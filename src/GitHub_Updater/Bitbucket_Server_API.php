@@ -130,9 +130,8 @@ class Bitbucket_Server_API extends Bitbucket_API {
 		return $remote_info_file;
 	}
 
-
 	/**
-	 * Get the remote info to for tags.
+	 * Get the remote info for tags.
 	 *
 	 * @return bool
 	 */

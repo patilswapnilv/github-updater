@@ -98,7 +98,7 @@ class Bitbucket_API extends API {
 	}
 
 	/**
-	 * Get the remote info to for tags.
+	 * Get the remote info for tags.
 	 *
 	 * @return bool
 	 */
