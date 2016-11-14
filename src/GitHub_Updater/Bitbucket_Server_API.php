@@ -45,8 +45,7 @@ class Bitbucket_Server_API extends Bitbucket_API {
 		parent::$hours  = 12;
 		$this->response = $this->get_transient();
 
-		add_filter( 'http_request_args', array( &$this, 'maybe_authenticate_http' ), 10, 2 );
-		add_filter( 'http_request_args', array( &$this, 'http_release_asset_auth' ), 15, 2 );
+		$this->load_hooks();
 
 		if ( ! isset( self::$options['bitbucket_enterprise_username'] ) ) {
 			self::$options['bitbucket_enterprise_username'] = null;
@@ -55,6 +54,23 @@ class Bitbucket_Server_API extends Bitbucket_API {
 			self::$options['bitbucket_enterprise_password'] = null;
 		}
 		add_site_option( 'github_updater', self::$options );
+	}
+
+	/**
+	 * Load hooks for Bitbucket authentication headers.
+	 */
+	public function load_hooks() {
+		add_filter( 'http_request_args', array( &$this, 'maybe_authenticate_http' ), 5, 2 );
+		add_filter( 'http_request_args', array( &$this, 'http_release_asset_auth' ), 15, 2 );
+	}
+
+	/**
+	 * Remove hooks for Bitbucket authentication headers.
+	 */
+	public function remove_hooks() {
+		remove_filter( 'http_request_args', array( &$this, 'maybe_authenticate_http' ) );
+		remove_filter( 'http_request_args', array( &$this, 'http_release_asset_auth' ) );
+		remove_filter( 'http_request_args', array( &$this, 'ajax_maybe_authenticate_http' ) );
 	}
 
 	/**
