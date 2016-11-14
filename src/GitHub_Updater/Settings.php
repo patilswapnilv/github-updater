@@ -134,11 +134,6 @@ class Settings extends Base {
 		$gits = array_map( function( $e ) {
 			$e = explode( '_', $e );
 
-			// for 'bitbucket_enterprise_{plugin|theme}
-			if ( count( $e ) > 2 ) {
-				return $e[0] . $e[1];
-			}
-
 			return $e[0];
 		}, $gits );
 
