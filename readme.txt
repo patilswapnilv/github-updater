@@ -50,8 +50,8 @@ The following headers are available for use depending upon your hosting source.
 * GitLab Languages
 * GitLab CI Job
 
-[Comprehensive information regarding GitHub Updater](https://afragen.github.io/github-updater) is available.
+[Comprehensive information regarding GitHub Updater is available on the wiki.](https://github.com/afragen/github-updater/wiki)
 
 ## Slack
 
-We now have a [Slack team for GitHub Updater](https://github-updater.slack.com). Please ping me for an invite.
+We now have a [Slack team for GitHub Updater](https://github-updater.slack.com). Please [click here for an invite](https://github-updater.herokuapp.com). You will be automatically added to the _#general_ and _#random_ channels. Please take a look at other channels too.

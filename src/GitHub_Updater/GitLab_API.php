@@ -94,6 +94,7 @@ class GitLab_API extends API {
 			return false;
 		}
 
+		$response['dot_org'] = $this->get_dot_org_data();
 		$this->set_file_info( $response );
 
 		return true;
@@ -107,10 +108,6 @@ class GitLab_API extends API {
 	public function get_remote_tag() {
 		$repo_type = $this->return_repo_type();
 		$response  = isset( $this->response['tags'] ) ? $this->response['tags'] : false;
-
-		if ( $this->exit_no_update( $response ) ) {
-			return false;
-		}
 
 		if ( ! $response ) {
 			$id           = $this->get_gitlab_id();

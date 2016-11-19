@@ -910,6 +910,7 @@ class Base {
 		$this->type->requires_php_version = ! empty( $response['Requires PHP'] ) ? $response['Requires PHP'] : $this->type->requires_php_version;
 		$this->type->requires_wp_version  = ! empty( $response['Requires WP'] ) ? $response['Requires WP'] : $this->type->requires_wp_version;
 		$this->type->release_asset        = ! empty( $response['Release Asset'] ) && true == $response['Release Asset'] ? true : false;
+		$this->type->dot_org              = $response['dot_org'];
 	}
 
 	/**
@@ -1185,7 +1186,7 @@ class Base {
 
 		printf( esc_html__( 'Current branch is `%1$s`, try %2$sanother version%3$s', 'github-updater' ),
 			$data['branch'],
-			'<a href="javascript:jQuery(\'#' . $data['id'] . '\').toggle()">',
+			'<a href="#" onclick="jQuery(\'#' . $data['id'] . '\').toggle();return false;">',
 			'</a>.'
 		);
 
@@ -1265,7 +1266,7 @@ class Base {
 			$type = 'theme';
 		}
 
-		if ( array_key_exists( $slug, $this->config ) ) {
+		if ( ! empty( $slug ) && array_key_exists( $slug, $this->config ) ) {
 			$repo = $this->config[ $slug ];
 			$this->set_rollback_transient( $type, $repo );
 		}
