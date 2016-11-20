@@ -233,7 +233,6 @@ class Theme extends Base {
 			add_filter( 'wp_get_update_data', array( &$this, 'set_rollback' ) );
 
 			/*
-			 * Remove WordPress update row in theme row, only in multisite.
 			 * Add update row to theme row, only in multisite.
 			 */
 			if ( is_multisite() ) {
@@ -279,14 +278,12 @@ class Theme extends Base {
 			return $false;
 		}
 
-		/*
-		 * Early return $false for adding themes from repo
-		 */
-		if ( isset( $response->fields ) && ! $response->fields['sections'] ) {
+		$theme = isset( $this->config[ $response->slug ] ) ? $this->config[ $response->slug ] : false;
+
+		// wp.org theme.
+		if ( ! $theme ) {
 			return $false;
 		}
-
-		$theme = isset( $this->config[ $response->slug ] ) ? $this->config[ $response->slug ] : $response;
 
 		$response->slug         = $theme->repo;
 		$response->name         = $theme->name;

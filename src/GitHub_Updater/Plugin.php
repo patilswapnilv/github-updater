@@ -368,24 +368,15 @@ class Plugin extends Base {
 
 		// wp.org only plugin.
 		if ( ! $plugin ) {
-			$response = wp_remote_get( 'https://api.wordpress.org/plugins/info/1.0/' . $response->slug );
-			if ( is_wp_error( $response ) ) {
-				return false;
-			}
-			$response = unserialize( $response['body'] );
-
-			return $response;
+			return $false;
 		}
 
 		/*
 		 * Fix for extended naming.
 		 */
-		$repos = $this->get_repo_slugs( $plugin->repo );
-		if ( $response->slug === $repos['repo'] || $response->slug === $repos['extended_repo'] ) {
-			$response->slug = $repos['repo'];
-		}
+		$repos          = $this->get_repo_slugs( $plugin->repo );
+		$response->slug = ( $response->slug === $repos['extended_repo'] ) ? $repos['repo'] : $plugin->repo;
 
-		$response->slug          = $plugin->repo;
 		$response->plugin_name   = $plugin->name;
 		$response->name          = $plugin->name;
 		$response->author        = $plugin->author;

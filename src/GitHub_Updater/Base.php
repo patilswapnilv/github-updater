@@ -137,12 +137,9 @@ class Base {
 	 * Loads options to private static variable.
 	 */
 	public function __construct() {
-		if ( isset( $_POST['ghu_refresh_cache'] ) ) {
+		if ( isset( $_POST['ghu_refresh_cache'] ) && ! ( $this instanceof Messages ) ) {
 			$this->delete_all_transients();
 		}
-
-		// Run GitHub Updater upgrade functions.
-		new GHU_Upgrade();
 
 		$this->load_hooks();
 	}
@@ -240,6 +237,12 @@ class Base {
 
 		if ( in_array( $pagenow, array_unique( $admin_pages ) ) ) {
 			$force_meta_update = true;
+
+			// Run GitHub Updater upgrade functions.
+			new GHU_Upgrade();
+
+			// Ensure transient updated on plugins.php and themes.php pages.
+			add_action( 'admin_init', array( &$this, 'admin_pages_update_transient' ) );
 		}
 
 		if ( isset( $_POST['ghu_refresh_cache'] ) ) {
@@ -893,9 +896,6 @@ class Base {
 
 		$wpdb->query( $wpdb->prepare( $delete_string, array( '%_ghu-%' ) ) );
 
-		set_site_transient( 'update_plugins', null );
-		set_site_transient( 'update_themes', null );
-
 		return true;
 	}
 
@@ -1317,6 +1317,29 @@ class Base {
 			$updates_transient->response[ $slug ] = (array) $rollback;
 		}
 		set_site_transient( $transient, $updates_transient );
+	}
+
+	/**
+	 * Ensure update transient is update to date on admin pages.
+	 */
+	public function admin_pages_update_transient() {
+		global $pagenow;
+
+		$admin_pages   = array( 'plugins.php', 'themes.php' );
+		$is_admin_page = in_array( $pagenow, $admin_pages ) ? true : false;
+		$capability    = 'update_' . rtrim( $pagenow, '.php' );
+
+		if ( current_user_can( $capability ) && $is_admin_page ) {
+			$current = get_site_transient( $capability );
+			if ( 'plugins.php' === $pagenow ) {
+				$current = Plugin::instance()->pre_set_site_transient_update_plugins( $current );
+			}
+			if ( 'themes.php' === $pagenow ) {
+				$current = Theme::instance()->pre_set_site_transient_update_themes( $current );
+			}
+			set_site_transient( $capability, $current );
+		}
+		remove_filter( 'admin_init', array( &$this, 'admin_pages_update_transient' ) );
 	}
 
 	/**
