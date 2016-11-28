@@ -238,29 +238,21 @@ class GitLab_API extends API {
 	public function get_repo_meta() {
 		$response = isset( $this->response['meta'] ) ? $this->response['meta'] : false;
 
-		if ( $this->exit_no_update( $response ) ) {
-			return false;
-		}
-
 		if ( ! $response ) {
 			self::$method = 'meta';
-			$projects     = isset( $this->response['projects'] ) ? $this->response['projects'] : false;
+			$project      = isset( $this->response['project'] ) ? $this->response['project'] : false;
 
 			// exit if transient is empty
-			if ( ! $projects ) {
+			if ( ! $project ) {
 				return false;
 			}
 
-			foreach ( $projects as $project ) {
-				if ( $this->type->repo === $project->path ) {
-					$response = $project;
-					break;
-				}
-			}
+			$response = ( $this->type->repo === $project->path ) ? $project : false;
 
 			if ( $response ) {
 				$response = $this->parse_meta_response( $response );
 				$this->set_transient( 'meta', $response );
+				$this->set_transient( 'project', null );
 			}
 		}
 
@@ -503,7 +495,7 @@ class GitLab_API extends API {
 	}
 
 	/**
-	 * Get GitLab project ID.
+	 * Get GitLab project ID and project meta.
 	 *
 	 * @return string|int
 	 */
@@ -515,10 +507,11 @@ class GitLab_API extends API {
 			self::$method = 'projects';
 			$response     = $this->api( '/projects?per_page=100' );
 
-			foreach ( $response as $project ) {
+			foreach ( (array) $response as $project ) {
 				if ( $this->type->repo === $project->path ) {
 					$id = $project->id;
 					$this->set_transient( 'project_id', $id );
+					$this->set_transient( 'project', $project );
 
 					return $id;
 				}
@@ -568,7 +561,7 @@ class GitLab_API extends API {
 		$response = array( $response );
 
 		array_filter( $response, function( $e ) use ( &$arr ) {
-			$arr['private']      = $e->public;
+			$arr['private']      = ! $e->public;
 			$arr['last_updated'] = $e->last_activity_at;
 			$arr['watchers']     = 0;
 			$arr['forks']        = $e->forks_count;
