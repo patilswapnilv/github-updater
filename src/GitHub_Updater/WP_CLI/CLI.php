@@ -15,9 +15,6 @@ use WP_CLI_Command;
 use Fragen\Singleton;
 use Fragen\GitHub_Updater\Traits\GHU_Trait;
 
-// Add WP-CLI commands.
-WP_CLI::add_command( 'github-updater', 'Fragen\\GitHub_Updater\\WP_CLI\\CLI' );
-
 /**
  * Manage GitHub Updater commands.
  *
@@ -68,10 +65,14 @@ class CLI extends WP_CLI_Command {
 		$api_key = get_site_option( 'github_updater_api_key' );
 		$api_url = add_query_arg(
 			[ 'key' => $api_key ],
-			\home_url( home_url( 'wp-json/' . $this->get_class_vars( 'REST_API', 'namespace' ) . '/update/' ) )
+			\home_url( ( 'wp-json/' . $this->get_class_vars( 'REST_API', 'namespace' ) . '/update/' ) )
 		);
 
 		WP_CLI::success( 'GitHub Updater REST API key has been reset.' );
+		WP_CLI::success( sprintf( 'The new REST API key is: `%s`', $api_key ) );
 		WP_CLI::success( sprintf( 'The current REST API endpoint for updating is `%s`', $api_url ) );
 	}
 }
+
+// Add WP-CLI commands.
+WP_CLI::add_command( 'github-updater', 'Fragen\\GitHub_Updater\\WP_CLI\\CLI' );
